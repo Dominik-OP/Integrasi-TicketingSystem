@@ -1,0 +1,674 @@
+:root {
+  color-scheme: light;
+  --page: #fcfdfb;
+  --panel: #fff;
+  --soft: #f3f6f0;
+  --hover: #edf4e7;
+  --theme-muted: #7f8f79;
+  --theme-border: #e0e8da;
+  --theme-accent: #26735d;
+}
+.theme-toggle {
+  width: 35px;
+  height: 35px;
+  border: 1px solid var(--theme-border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--theme-accent);
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: var(--hover);
+}
+.workspace-trigger {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  gap: 10px;
+  padding: 13px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 11px;
+  background: var(--panel);
+  margin: 33px 0 28px;
+  box-shadow: 0 3px 12px #21372804;
+  flex-shrink: 0;
+}
+.workspace-trigger:hover {
+  border-color: #a6bca0;
+}
+.workspace-symbol {
+  width: 35px;
+  height: 37px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #e9f1e2;
+  color: #729260;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.workspace-trigger > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-trigger small {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--theme-muted);
+  margin-bottom: 5px;
+}
+.workspace-trigger strong {
+  display: block;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-trigger > svg {
+  flex-shrink: 0;
+  color: #8d9e80;
+}
+.workspace-dialog {
+  position: fixed;
+  left: 24px;
+  top: 112px;
+  margin: 0;
+  width: 335px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 140px);
+  padding: 0;
+  border: 1px solid var(--theme-border);
+  border-radius: 15px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 18px 65px #102a2733;
+  overflow: auto;
+}
+.workspace-dialog::backdrop {
+  background: #18332b33;
+  backdrop-filter: blur(2px);
+}
+.workspace-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 21px 19px 15px;
+  gap: 8px;
+}
+.workspace-dialog h2 {
+  font-size: 16px;
+  margin: 0 0 7px;
+}
+.workspace-dialog p {
+  font-size: 11px;
+  color: var(--theme-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+.workspace-dialog header button {
+  padding: 3px;
+  color: var(--theme-muted);
+}
+.workspace-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--theme-border);
+  background: var(--soft);
+  margin: 0 16px 12px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--theme-muted);
+}
+.workspace-search input {
+  border: 0;
+  background: transparent;
+  padding: 11px 0;
+  font-size: 11px;
+  width: 100%;
+  box-shadow: none;
+}
+.workspace-options {
+  padding: 0 9px 12px;
+  max-height: 310px;
+  overflow: auto;
+}
+.workspace-options > button {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 9px;
+  border-radius: 8px;
+  margin: 2px 0;
+  justify-content: flex-start;
+}
+.workspace-options > button:hover {
+  background: var(--soft);
+}
+.workspace-options > button.chosen {
+  background: var(--hover);
+}
+.workspace-options > button > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-options strong {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.workspace-options small {
+  display: block;
+  font-size: 10px;
+  color: var(--theme-muted);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.workspace-options > button > svg {
+  color: var(--theme-accent);
+  flex-shrink: 0;
+}
+.workspace-options .workspace-no-results {
+  padding: 22px 12px;
+}
+.workspace-dialog > footer {
+  border-top: 1px solid var(--theme-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 15px 19px;
+  font-size: 10px;
+  color: var(--theme-muted);
+}
+.workspace-dialog > footer button {
+  font-size: 10px;
+  color: var(--theme-accent);
+}
+.access-names .panel-heading {
+  align-items: flex-start;
+}
+.access-names .panel-heading p {
+  max-width: 620px;
+  line-height: 1.8;
+}
+.access-name-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 17px;
+}
+.access-name-grid > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--theme-border);
+  background: var(--soft);
+  border-radius: 9px;
+  padding: 17px;
+}
+.access-name-grid > div > svg {
+  color: var(--theme-accent);
+}
+.access-name-grid strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.access-name-grid small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--theme-muted);
+}
+.access-name-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.access-name-grid > label > span {
+  font-size: 11px;
+  color: var(--theme-muted);
+  line-height: 1.6;
+  min-height: 35px;
+}
+.access-name-grid input {
+  width: 100%;
+  font-size: 12px;
+}
+.access-name-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 16px;
+}
+.access-names form > p {
+  margin-top: 14px;
+}
+
+/* Dark palette covers shared surfaces and component states in every portal. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #e0e9e3;
+  --muted: #9cafa1;
+  --line: #2d3c33;
+  --surface: #17221c;
+  --green: #3e8d6f;
+  --green-dark: #4c9f7f;
+  --page: #111a16;
+  --panel: #1b2720;
+  --soft: #202f26;
+  --hover: #2a4031;
+  --theme-muted: #a0b2a4;
+  --theme-border: #34493a;
+  --theme-accent: #97c8ac;
+}
+:root[data-theme='dark'] body {
+  background: var(--page);
+  color: var(--ink);
+}
+:root[data-theme='dark'] :is(input, select, textarea) {
+  background: #142019;
+  color: #e0e9e3;
+  border-color: #3b5040;
+}
+:root[data-theme='dark'] :is(input, textarea)::placeholder {
+  color: #8da18f;
+  opacity: 1;
+}
+:root[data-theme='dark'] :is(input, select, textarea):focus {
+  border-color: #8db69c;
+  box-shadow: 0 0 0 3px #82ad8a22;
+}
+:root[data-theme='dark'] :is(h1, h2, h3) {
+  color: #e0e9e3;
+}
+:root[data-theme='dark'] :is(.sidebar, .topbar, .public-header) {
+  background: #152019;
+  border-color: var(--line);
+}
+:root[data-theme='dark']
+  :is(
+    .stat-card,
+    .ticket-card,
+    .panel,
+    .member-card,
+    .project-card,
+    .public-card,
+    .dialog,
+    .notification-pop,
+    .table-wrap,
+    .role-summary > button,
+    .outline,
+    .view-toggle,
+    .search-field
+  ) {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--ink);
+}
+:root[data-theme='dark'] :is(.primary, .brand-mark) {
+  color: #fff;
+  background: #33785c;
+}
+:root[data-theme='dark'] .primary:hover {
+  background: #408b6c;
+}
+:root[data-theme='dark'] :is(.public-page) {
+  background: radial-gradient(ellipse at 50% 0, #243629, transparent 65%), var(--page);
+}
+:root[data-theme='dark']
+  :is(
+    .kanban-column,
+    .help-card,
+    .info-box,
+    .prefix-preview,
+    .priority-auto,
+    .upload,
+    .comment,
+    .ticket-context,
+    .tracking-summary,
+    .public-empty,
+    .confirmation-email,
+    .login-emblem,
+    .project-icon,
+    .workspace-logo
+  ) {
+  background: #202f25;
+  border-color: #374b38;
+  color: #b2c9ac;
+}
+:root[data-theme='dark']
+  :is(.help-card button, .editor-panel header button, .dialog > header button) {
+  background: #2a3b2d;
+  border-color: #405441;
+  color: #d7e5d3;
+}
+:root[data-theme='dark'] .kanban-column.over {
+  background: #2e4432;
+  outline-color: #a2c391;
+}
+:root[data-theme='dark']
+  :is(
+    .sidebar nav button,
+    .sidebar-track,
+    .breadcrumb,
+    .breadcrumb strong,
+    .page-heading p,
+    .public-header nav,
+    .subtitle,
+    .public-foot,
+    .brand-caption,
+    .profile small,
+    .nav-label,
+    .overline,
+    .heading-dot,
+    .team-presence > span,
+    .board-footer,
+    .demo-pill,
+    .help-card p,
+    .filter-selects,
+    .filter-selects select,
+    .card-time,
+    .ticket-number,
+    .assignee,
+    .assignee-name small,
+    .card-counts,
+    .add-column,
+    .column-empty,
+    .base-level,
+    .member-card p,
+    .member-bottom > span,
+    .report-filters,
+    .stat-card small,
+    .stat-card span,
+    .panel p,
+    .section-heading p,
+    .project-card > p,
+    .project-card footer > span,
+    .prefix-preview span,
+    .project-public-link > span,
+    .role-summary small,
+    .permission-options small,
+    .override-heading p,
+    .override-options small,
+    .detail-head p,
+    .detail-description p,
+    .detail-description .muted,
+    .comment small,
+    .timeline strong,
+    .timeline small,
+    .ticket-context > span,
+    .tracking-summary span,
+    .public-benefits > span,
+    .tracking-intro p,
+    .priority-auto p,
+    .priority-auto strong,
+    .project-form-note,
+    .upload span,
+    .impact-options small,
+    .confirmation-email p,
+    .public-empty p,
+    .form-stack > p,
+    .table-title small,
+    .table-role,
+    .legend,
+    .bar-chart span,
+    .bar-chart strong,
+    .category-bars > div > div:first-child
+  ) {
+  color: #a5b9a3;
+}
+:root[data-theme='dark'] :is(.sidebar nav button.active, .view-toggle .selected) {
+  background: #2b4030;
+  color: #b8d5ac;
+}
+:root[data-theme='dark'] :is(.board-tabs button, .settings-tabs button) {
+  color: #a0b398;
+}
+:root[data-theme='dark']
+  :is(
+    .board-tabs button.selected,
+    .settings-tabs button.selected,
+    .text-button,
+    .project-public-link > a,
+    .public-active,
+    .project-card .text-button,
+    .role-summary span,
+    .history-actor
+  ) {
+  color: #a7d09a;
+}
+:root[data-theme='dark'] :is(.board-tabs button.selected, .settings-tabs button.selected) {
+  border-color: #96c485;
+}
+:root[data-theme='dark']
+  :is(
+    .count,
+    .nav-count,
+    .board-tabs button span,
+    .category-tag,
+    .project-tag,
+    .member-status,
+    .tracking-status,
+    .form-section-label > span,
+    .history-actor .category-tag
+  ) {
+  background: #2a3e2d;
+  border-color: #3e5640;
+  color: #b4cc9f;
+}
+:root[data-theme='dark'] :is(.member-status.inactive, .permission-no) {
+  background: #303732;
+  color: #a9b2a6;
+}
+:root[data-theme='dark']
+  :is(
+    .card-title,
+    .assignee-name,
+    .member-bottom strong,
+    .table-title strong,
+    .prefix-preview code,
+    .ticket-context strong,
+    .tracking-summary strong,
+    .tracking-intro h2,
+    .confirmation-email strong,
+    .form-stack label,
+    .detail-fields label,
+    .settings-info label,
+    .impact-options legend,
+    .permission-options strong,
+    .override-options span
+  ) {
+  color: #d2e0c8;
+}
+:root[data-theme='dark']
+  :is(
+    .card-footer,
+    .profile,
+    .board-toolbar,
+    .detail-fields,
+    .detail-description,
+    .dialog > header,
+    .tracking-result,
+    .tracking-intro,
+    .project-public-link,
+    .member-bottom,
+    .override-heading,
+    .override-options > label,
+    .notification-pop > button,
+    .permission-options > label
+  ) {
+  border-color: var(--line);
+}
+:root[data-theme='dark'] :is(.permission-options, .impact-options label) {
+  border-color: #3a4f39;
+}
+:root[data-theme='dark'] .impact-options label:has(input:checked) {
+  background: #2d432c;
+  border-color: #82a76e;
+}
+:root[data-theme='dark'] .priority.high {
+  background: #493c25;
+  color: #e3bb7c;
+}
+:root[data-theme='dark'] .priority.urgent {
+  background: #482c29;
+  color: #eca297;
+}
+:root[data-theme='dark'] .priority.medium {
+  background: #3e4025;
+  color: #d2ca8b;
+}
+:root[data-theme='dark'] .priority.low {
+  background: #2d402c;
+  color: #b6cf9f;
+}
+:root[data-theme='dark'] .sla.safe {
+  color: #acc99a;
+}
+:root[data-theme='dark'] .sla.warning {
+  color: #dfc785;
+}
+:root[data-theme='dark'] .sla.late {
+  color: #e6a38d;
+}
+:root[data-theme='dark'] .comment.internal {
+  background: #383321;
+  border-color: #635232;
+}
+:root[data-theme='dark'] .attachment {
+  background: #243124;
+  border-color: #3b4d35;
+  color: #d0dec5;
+}
+:root[data-theme='dark'] :is(th) {
+  background: #243425;
+  color: #b6c7aa;
+}
+:root[data-theme='dark'] :is(td) {
+  border-color: #2d3d2c;
+  color: #c0cfb6;
+}
+:root[data-theme='dark'] tbody tr:hover {
+  background: #243525;
+}
+:root[data-theme='dark'] .permission-matrix td:first-child small {
+  color: #9bb18e;
+}
+:root[data-theme='dark'] .permission-yes {
+  color: #aacd92;
+}
+:root[data-theme='dark'] .progress {
+  background: #2b3b27;
+}
+:root[data-theme='dark'] .progress i {
+  background: #83a76a;
+}
+:root[data-theme='dark'] .bar-chart {
+  border-color: #3a4e32;
+}
+:root[data-theme='dark'] .avatar {
+  border-color: #233027;
+  color: #d5c7b5;
+  background: #4e4233;
+}
+:root[data-theme='dark'] .avatar.color-1 {
+  color: #bddbc0;
+  background: #344d3d;
+}
+:root[data-theme='dark'] .avatar.color-2 {
+  color: #d3c3df;
+  background: #463b51;
+}
+:root[data-theme='dark'] .avatar.color-3 {
+  color: #e1cbb2;
+  background: #584833;
+}
+:root[data-theme='dark'] .timeline > div {
+  border-color: #42573a;
+}
+:root[data-theme='dark'] .timeline i {
+  background: #a0bd85;
+  border-color: #243222;
+  box-shadow: 0 0 0 1px #506943;
+}
+:root[data-theme='dark'] .error-text {
+  color: #f0a68d;
+}
+:root[data-theme='dark'] .toast {
+  background: #315d3d;
+  color: #eaf4e2;
+}
+:root[data-theme='dark'] .success code {
+  background: #293e26;
+  color: #b4d49b;
+}
+:root[data-theme='dark'] .workspace-symbol {
+  background: #30452f;
+  color: #b5d29e;
+}
+:root[data-theme='dark'] .stat-icon.green {
+  background: #2a4030;
+  color: #a6c295;
+}
+:root[data-theme='dark'] .stat-icon.blue {
+  background: #293c46;
+  color: #a3c3d1;
+}
+:root[data-theme='dark'] .stat-icon.orange {
+  background: #463b2b;
+  color: #d9bc8a;
+}
+:root[data-theme='dark'] .search-field input,
+:root[data-theme='dark'] .workspace-search input {
+  background: transparent;
+}
+:root[data-theme='dark'] .notification-pop strong {
+  color: #dbe7d3;
+}
+:root[data-theme='dark'] .overlay {
+  background: #050c09a6;
+}
+@media (max-width: 640px) {
+  .workspace-dialog {
+    left: 16px;
+    top: 90px;
+    max-height: calc(100dvh - 110px);
+  }
+  .access-name-grid {
+    grid-template-columns: 1fr;
+  }
+  .access-name-grid > label > span {
+    min-height: 0;
+  }
+  .access-names .panel-heading {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .access-names .panel-heading .outline {
+    font-size: 11px;
+  }
+  .public-header {
+    flex-wrap: wrap;
+  }
+  .public-header nav {
+    gap: 10px;
+  }
+  .public-header .theme-toggle {
+    width: 30px;
+    height: 30px;
+  }
+  .public-header .brand {
+    font-size: 22px;
+  }
+  .theme-toggle {
+    width: 31px;
+    height: 31px;
+  }
+  .topbar-right {
+    gap: 10px;
+  }
+}
