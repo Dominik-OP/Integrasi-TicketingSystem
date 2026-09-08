@@ -1,14 +1,15 @@
 # Integrasi Ticketing System
 
-Aplikasi ticketing internal dan portal laporan publik berbasis Next.js. Frontend saat ini sudah menyediakan alur demo lengkap, sedangkan fondasi database telah diterapkan pada InsForge dan siap untuk tahap integrasi aplikasi.
+Aplikasi ticketing internal dan portal laporan publik berbasis Next.js dengan backend InsForge.
 
 ## Status implementasi
 
-- Frontend dashboard, board, daftar tiket, laporan, tim, dan pengaturan tersedia sebagai demo interaktif.
-- Portal publik mendukung link per project dan halaman tracking tiket.
-- Database InsForge sudah memiliki schema, constraint, index, RLS, master data, dan RPC transaksional.
-- Integrasi frontend dengan InsForge Auth, Database SDK, Storage, dan Route Handler belum disambungkan.
-- Data yang tampil di frontend masih berasal dari localStorage dan data demo; jangan gunakan data sensitif.
+- Login workspace menggunakan email dan password melalui InsForge Auth; tidak ada lagi pemilih akun demo.
+- Pada database fresh, email dan password pertama otomatis membuat akun Admin.
+- Portal publik membuat tiket nyata tanpa kategori awal dan menyediakan link tracking berbasis token hash.
+- Workspace membaca project, kategori, role, anggota, tiket, komentar, dan histori dari InsForge.
+- Assignment, perubahan prioritas/status, resolution, closure, dan komentar disimpan melalui RPC transaksional.
+- Form publik menempatkan judul dan deskripsi di bagian paling atas; kategori ditentukan oleh tim setelah tiket masuk.
 
 ## Teknologi
 
@@ -25,10 +26,13 @@ Gunakan Node.js 22.18 atau yang lebih baru dan pnpm.
 
 ```sh
 pnpm install --frozen-lockfile
+Copy-Item .env.example .env.local
 pnpm dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000). Pada tahap sekarang, pilih akun demo untuk masuk ke workspace internal.
+Isi `.env.local` dengan URL, anon key, dan API key project InsForge, lalu buka [http://localhost:3000](http://localhost:3000). Pilih **Masuk tim**, lalu masukkan email dan password.
+
+> Pada instalasi fresh, kredensial pertama otomatis dibuat sebagai akun Admin. Setelah anggota pertama tersedia, email lain hanya dapat masuk jika sudah didaftarkan sebagai anggota tim.
 
 ## Menyiapkan backend InsForge
 
@@ -49,8 +53,10 @@ Migration database berada di folder `migrations/` dan mencakup:
 - tracking grant berbasis token hash, outbox email, delivery log, dan audit event;
 - Row Level Security dan pembatasan tabel server-only;
 - RPC transaksional untuk membuat tiket, assignment, transisi status, dan komentar.
+- bootstrap Admin pertama yang aman terhadap login bersamaan dan tiket publik tanpa kategori awal.
+- bucket privat `ticket-attachments` untuk lampiran, dengan signed URL sementara dan metadata pada tabel `attachments`.
 
-API key InsForge adalah credential admin penuh. Jangan menaruhnya pada source code atau variable dengan prefix `NEXT_PUBLIC_`. Saat integrasi dimulai, browser hanya akan menerima URL backend dan anon key; operasi privileged dijalankan melalui Route Handler server.
+API key InsForge adalah credential admin penuh. Jangan menaruhnya pada source code atau variable dengan prefix `NEXT_PUBLIC_`. Browser hanya menerima URL backend dan anon key; operasi privileged dijalankan melalui Route Handler server.
 
 ## Halaman utama
 
@@ -78,3 +84,15 @@ Nomor tiket menggunakan format `{PREFIX}-{YYYYMMDD}-{0001}`, dengan sequence ind
 ## Keamanan repository
 
 Repository tidak menyimpan `.env`, credential InsForge, cache/build output, konfigurasi agent lokal, atau dokumen perencanaan internal. Sebelum commit, selalu periksa hasil `git status` dan pastikan hanya source, konfigurasi build, test, migration, serta dokumentasi publik yang ikut.
+
+## Catatan integrasi saat ini
+
+Lampiran PNG, JPG, WebP, dan PDF (maksimal 5 MB per file, 5 file per tiket) diunggah ke bucket privat `ticket-attachments`. Aplikasi menyimpan nama file, key, URL storage, mime type, dan ukuran pada tabel `attachments`, lalu membuat signed URL yang berlaku sementara ketika tiket dibuka oleh pelapor atau anggota tim yang berwenang.
+
+Bucket dibuat dengan:
+
+```sh
+npx -y @insforge/cli storage create-bucket ticket-attachments --private
+```
+
+Pengelolaan master data dari layar pengaturan akan menjadi tahap integrasi berikutnya.

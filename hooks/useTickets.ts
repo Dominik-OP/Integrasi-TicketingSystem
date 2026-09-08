@@ -34,7 +34,8 @@ export function useTickets(
   userId: string,
   setToast: (msg: string) => void,
   onResolve: (id: string) => void,
-  onClose: (id: string) => void
+  onClose: (id: string) => void,
+  reload: () => Promise<void>
 ): UseTicketsReturn {
   const changeTicket = useCallback(
     (id: string, patch: Partial<Ticket>, event: string) => {
@@ -58,6 +59,30 @@ export function useTickets(
         onClose(id);
         return;
       }
+      const databaseId = ticket.databaseId;
+      if (!databaseId || !ticket.version) return;
+      const newestComment = patch.comments?.at(-1);
+      const payload = newestComment
+        ? {
+            action: 'comment',
+            body: newestComment.text,
+            visibility: newestComment.internal ? 'internal' : 'public',
+          }
+        : patch.status
+          ? {
+              action: 'transition',
+              status: patch.status,
+              expectedVersion: ticket.version,
+              reason: patch.closure?.reason,
+              resolution: patch.resolution,
+            }
+          : {
+              action: 'assign',
+              expectedVersion: ticket.version,
+              reviewer: patch.reviewer ?? ticket.reviewer,
+              agent: patch.agent ?? ticket.agent,
+              priority: patch.priority ?? ticket.priority,
+            };
       setTickets((all) =>
         all.map((t) =>
           t.id === id
@@ -85,9 +110,23 @@ export function useTickets(
             : t
         )
       );
-      setToast('Perubahan tiket berhasil disimpan.');
+      void fetch(`/api/tickets/${encodeURIComponent(databaseId)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          await reload();
+          setToast('Perubahan tiket berhasil disimpan.');
+        })
+        .catch((reason) => {
+          setToast(reason instanceof Error ? reason.message : 'Perubahan tiket gagal disimpan.');
+          void reload();
+        });
     },
-    [tickets, setTickets, userId, team, roles, setToast, onResolve, onClose]
+    [tickets, setTickets, userId, team, roles, setToast, onResolve, onClose, reload]
   );
 
   const moveTicket = useCallback(

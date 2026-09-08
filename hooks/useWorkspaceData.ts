@@ -1,69 +1,48 @@
 'use client';
-import {
-  seedCategories,
-  seedMembers,
-  seedTickets,
-  type Category,
-  type Member,
-  type Ticket,
-} from '@/lib/demo';
-import { upgradeHistory } from '@/lib/history';
-import { defaultRoles, roleLabel, type RoleDefinition } from '@/lib/permissions';
-import { defaultProjects, newTrackingToken, type Project } from '@/lib/projects';
-import { useEffect, useState } from 'react';
+import type { Category, Member, Ticket } from '@/lib/demo';
+import type { RoleDefinition } from '@/lib/permissions';
+import type { Project } from '@/lib/projects';
+import { useCallback, useEffect, useState } from 'react';
 
-/** Hydrate all related records before allowing persistence to write them. */
 export function useWorkspaceData(notify: (message: string) => void) {
-  const [team, setTeam] = useState<Member[]>(seedMembers);
-  const [categories, setCategories] = useState<Category[]>(seedCategories);
-  const [projects, setProjects] = useState<Project[]>(defaultProjects);
-  const [roles, setRoles] = useState<RoleDefinition[]>(defaultRoles);
+  const [team, setTeam] = useState<Member[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ready, setReady] = useState(false);
-  useEffect(() => {
+
+  const reload = useCallback(async () => {
     try {
-      const raw =
-        localStorage.getItem('integrasi-demo-v2') ?? localStorage.getItem('integrasi-demo-v1');
-      const data = raw ? JSON.parse(raw) : null;
-      if (
-        data &&
-        (!Array.isArray(data.tickets) ||
-          !Array.isArray(data.team) ||
-          !Array.isArray(data.categories))
-      )
-        throw Error('Invalid demo');
-      const loadedTeam: Member[] = data?.team ?? seedMembers;
-      const loadedRoles: RoleDefinition[] = data?.roles ?? defaultRoles;
-      setTeam(loadedTeam);
-      setCategories(data?.categories ?? seedCategories);
-      setProjects(data?.projects ?? defaultProjects);
-      setRoles(loadedRoles);
-      setTickets(
-        ((data?.tickets ?? seedTickets()) as Ticket[]).map((ticket, index) => ({
-          ...ticket,
-          history: upgradeHistory(ticket, loadedTeam, (member) => roleLabel(member, loadedRoles)),
-          projectId: ticket.projectId ?? defaultProjects[index % 3]?.id ?? 'app',
-          trackingToken: ticket.trackingToken ?? newTrackingToken(),
-          impact: ticket.impact ?? '',
-        }))
-      );
-    } catch {
-      setTickets(seedTickets());
-      notify('Data browser tidak dapat dimuat. Data demo digunakan.');
+      const workspace = await fetch('/api/workspace', { cache: 'no-store' });
+      if (workspace.ok) {
+        const data = await workspace.json();
+        setTeam(data.team ?? []);
+        setCategories(data.categories ?? []);
+        setProjects(data.projects ?? []);
+        setRoles(data.roles ?? []);
+        setTickets(data.tickets ?? []);
+      } else {
+        const response = await fetch('/api/public/projects', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        setProjects(data.projects ?? []);
+        setTeam([]);
+        setCategories([]);
+        setRoles([]);
+        setTickets([]);
+      }
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Backend tidak dapat dihubungi.');
+    } finally {
+      setReady(true);
     }
-    setReady(true);
   }, [notify]);
+
   useEffect(() => {
-    if (!ready) return;
-    try {
-      localStorage.setItem(
-        'integrasi-demo-v2',
-        JSON.stringify({ tickets, team, categories, projects, roles })
-      );
-    } catch {
-      notify('Penyimpanan browser tidak tersedia. Perubahan hanya tersedia selama sesi ini.');
-    }
-  }, [tickets, team, categories, projects, roles, ready, notify]);
+    void reload();
+  }, [reload]);
+
   return {
     team,
     setTeam,
@@ -76,5 +55,6 @@ export function useWorkspaceData(notify: (message: string) => void) {
     tickets,
     setTickets,
     ready,
+    reload,
   };
 }

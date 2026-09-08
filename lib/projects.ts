@@ -1,6 +1,7 @@
 import type { Ticket } from './demo';
 export type Project = {
   id: string;
+  databaseId?: string;
   name: string;
   prefix: string;
   description: string;

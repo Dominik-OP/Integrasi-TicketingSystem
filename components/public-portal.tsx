@@ -1,8 +1,6 @@
 'use client';
-import Select from '@/components/ui/Select';
-import type { Member, Ticket } from '@/lib/demo';
+import type { Ticket } from '@/lib/demo';
 import { date } from '@/lib/demo';
-import { roleLabel, type RoleDefinition } from '@/lib/permissions';
 import type { Project } from '@/lib/projects';
 import {
   ArrowLeft,
@@ -20,13 +18,8 @@ import TicketHistory from './ticket-history';
 
 type Props = {
   view: string;
-  tickets: Ticket[];
   projects: Project[];
-  team: Member[];
-  roles: RoleDefinition[];
-  userId: string;
-  setUserId: (id: string) => void;
-  onLogin: () => void;
+  signIn: (email: string, password: string) => Promise<void>;
   navigate: (view: string) => void;
   submitted: Ticket | null;
   clearSubmitted: () => void;
@@ -37,13 +30,8 @@ type Props = {
 };
 export default function PublicPortal({
   view,
-  tickets,
   projects,
-  team,
-  roles,
-  userId,
-  setUserId,
-  onLogin,
+  signIn,
   navigate,
   submitted,
   clearSubmitted,
@@ -51,16 +39,32 @@ export default function PublicPortal({
   token,
   ready,
 }: Props) {
-  const [tracked, setTracked] = useState<string | null>(null),
-    [error, setError] = useState('');
+  const [tracked, setTracked] = useState<Ticket | null>(null),
+    [error, setError] = useState(''),
+    [authBusy, setAuthBusy] = useState(false);
   useEffect(() => {
     setTracked(null);
     setError('');
   }, [view, token]);
-  const tokenTicket = token ? tickets.find((t) => t.trackingToken === token) : undefined;
-  const ticket = token ? tokenTicket : tickets.find((t) => t.id === tracked);
+  useEffect(() => {
+    if (!token || view !== 'track') return;
+    setError('');
+    void fetch('/api/public/tracking', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        setTracked(data.ticket);
+      })
+      .catch((reason) =>
+        setError(reason instanceof Error ? reason.message : 'Link tidak tersedia.')
+      );
+  }, [token, view]);
+  const ticket = tracked;
   const resolution = ticket?.resolution;
-  const sample = tickets[0];
   const link = submitted?.trackingToken ? `/track/${submitted.trackingToken}` : '';
   const publicComments = ticket?.comments.filter((c) => !c.internal) ?? [];
   return (
@@ -148,9 +152,19 @@ export default function PublicPortal({
           ) : view === 'login' ? (
             <form
               className="form-stack"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                onLogin();
+                const fd = new FormData(e.currentTarget);
+                setAuthBusy(true);
+                setError('');
+                try {
+                  await signIn(String(fd.get('email')), String(fd.get('password')));
+                  window.location.assign('/');
+                } catch (reason) {
+                  setError(reason instanceof Error ? reason.message : 'Proses masuk gagal.');
+                } finally {
+                  setAuthBusy(false);
+                }
               }}
             >
               <div className="login-emblem">
@@ -158,19 +172,36 @@ export default function PublicPortal({
               </div>
               <h2>Masuk sebagai anggota tim</h2>
               <label>
-                Akun demo
-                <Select value={userId} onChange={(e) => setUserId(e.target.value)}>
-                  {team
-                    .filter((m) => m.active)
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} — {roleLabel(m, roles)}
-                      </option>
-                    ))}
-                </Select>
+                Email tim
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="nama@perusahaan.com"
+                />
               </label>
-              <button className="primary">
-                Masuk ke workspace <ArrowRight size={16} />
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="current-password"
+                  placeholder="Minimal 6 karakter"
+                />
+              </label>
+              <p className="muted small-text">
+                Pada setup fresh, email dan password pertama otomatis membuat akun Admin.
+              </p>
+              {error && (
+                <p role="alert" className="error-text">
+                  {error}
+                </p>
+              )}
+              <button className="primary" disabled={authBusy}>
+                {authBusy ? 'Memproses…' : 'Masuk ke workspace'} <ArrowRight size={16} />
               </button>
             </form>
           ) : (
@@ -178,16 +209,20 @@ export default function PublicPortal({
               {!token && (
                 <form
                   className="form-stack"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     const fd = new FormData(e.currentTarget);
-                    const found = tickets.find(
-                      (t) =>
-                        t.id.toLowerCase() === String(fd.get('number')).trim().toLowerCase() &&
-                        t.email.toLowerCase() === String(fd.get('email')).trim().toLowerCase()
+                    setError('');
+                    const response = await fetch('/api/public/tracking', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ number: fd.get('number'), email: fd.get('email') }),
+                    });
+                    const data = await response.json();
+                    setTracked(response.ok ? data.ticket : null);
+                    setError(
+                      response.ok ? '' : (data.error ?? 'Nomor tiket dan email tidak cocok.')
                     );
-                    setTracked(found?.id ?? null);
-                    setError(found ? '' : 'Nomor tiket dan email tidak cocok.');
                   }}
                 >
                   <label>
@@ -206,17 +241,12 @@ export default function PublicPortal({
                   <button className="primary">
                     <Search size={16} /> Lacak tiket
                   </button>
-                  {sample && (
-                    <p className="muted small-text">
-                      Coba demo: {sample.id} · {sample.email}
-                    </p>
-                  )}
                 </form>
               )}
               {token && !ticket && (
                 <div className="success">
                   <Link2 size={35} />
-                  <h2>Link tidak tersedia</h2>
+                  <h2>{error || 'Memuat laporan…'}</h2>
                   <button className="outline" onClick={() => navigate('track')}>
                     <ArrowLeft size={15} /> Gunakan tracking manual
                   </button>
@@ -272,6 +302,23 @@ export default function PublicPortal({
                   )}
                   <h3>Riwayat laporan</h3>
                   <TicketHistory history={ticket.history.filter((h) => !h.internal)} />
+                  {ticket.attachments.length > 0 && (
+                    <section className="tracking-attachments">
+                      <h3>Lampiran</h3>
+                      {ticket.attachments.map((attachment, index) => (
+                        <div className="attachment" key={index}>
+                          <Link2 size={15} />
+                          {attachment.url ? (
+                            <a href={attachment.url} target="_blank" rel="noreferrer">
+                              {attachment.name}
+                            </a>
+                          ) : (
+                            attachment.name
+                          )}
+                        </div>
+                      ))}
+                    </section>
+                  )}
                   <h3>Balasan tim</h3>
                   {publicComments.length ? (
                     publicComments.map((c, i) => (

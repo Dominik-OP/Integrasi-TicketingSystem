@@ -1025,6 +1025,7 @@ tbody tr:hover {
   padding: 20px;
   background: #f9fbf6;
   color: #819974 !important;
+  gap: 6px !important;
 }
 .upload span {
   font-size: 10px;
@@ -1033,10 +1034,24 @@ tbody tr:hover {
 }
 .upload input {
   max-width: 300px;
+  height: 38px;
   font-size: 10px;
   background: transparent;
   border: 0;
-  padding-bottom: 0;
+  padding: 5px;
+  line-height: 26px;
+  margin: 0 auto;
+}
+.upload input::file-selector-button {
+  height: 26px;
+  margin: 0 10px 0 0;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
 }
 .form-stack .check-label {
   flex-direction: row;

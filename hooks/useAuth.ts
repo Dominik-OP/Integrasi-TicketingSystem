@@ -1,57 +1,54 @@
 'use client';
-import { seedMembers, type Member } from '@/lib/demo';
+import type { Member } from '@/lib/demo';
 import { hasPermission, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { useCallback, useEffect, useState } from 'react';
 
-interface UseAuthReturn {
-  user: Member;
-  userId: string;
-  setUserId: (id: string) => void;
-  signedIn: boolean;
-  setSignedIn: (v: boolean) => void;
-  can: (key: Permission) => boolean;
-  canManage: boolean;
-  canSettings: boolean;
-}
+const guest: Member = { id: '', name: 'Tamu', email: '', role: 'Agent', active: false };
 
-export function useAuth(team: Member[], roles: RoleDefinition[], ready: boolean): UseAuthReturn {
-  const [userId, setUserId] = useState('1');
+export function useAuth(_team: Member[], roles: RoleDefinition[], _ready: boolean) {
+  const [user, setUser] = useState<Member>(guest);
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    if (!ready) return;
-    try {
-      const session = sessionStorage.getItem('integrasi-session');
-      if (session && team.some((m) => m.id === session && m.active)) {
-        setUserId(session);
-        setSignedIn(true);
-      } else {
-        setSignedIn(false);
-      }
-    } catch {
-      /* In-memory sign-in remains available when storage is blocked. */
-    }
-  }, [team, ready]);
+    void fetch('/api/auth/session', { cache: 'no-store' })
+      .then(async (response) => (response.ok ? response.json() : { user: null }))
+      .then((data) => {
+        setUser(data.user ?? guest);
+        setSignedIn(Boolean(data.user));
+      })
+      .catch(() => setSignedIn(false));
+  }, []);
 
-  const user: Member =
-    team.find((m) => m.id === userId && m.active) ??
-    team.find((m) => m.active) ??
-    seedMembers[0] ??
-    ({
-      id: '1',
-      name: 'Default',
-      email: 'default@demo',
-      role: 'Admin' as const,
-      active: true,
-      roleId: 'admin',
-    } satisfies Member);
+  const signIn = useCallback(async (email: string, password: string) => {
+    const response = await fetch('/api/auth/sign-in', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? 'Email atau password tidak cocok.');
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await fetch('/api/auth/sign-out', { method: 'POST' });
+    setUser(guest);
+    setSignedIn(false);
+  }, []);
 
   const can = useCallback((key: Permission) => hasPermission(user, roles, key), [user, roles]);
-
   const canManage = can('assign_ticket');
   const canSettings = (
     ['manage_categories', 'manage_roles', 'manage_projects'] as Permission[]
-  ).some((k) => can(k));
-
-  return { user, userId, setUserId, signedIn, setSignedIn, can, canManage, canSettings };
+  ).some(can);
+  return {
+    user,
+    userId: user.id,
+    signedIn,
+    setSignedIn,
+    can,
+    canManage,
+    canSettings,
+    signIn,
+    signOut,
+  };
 }

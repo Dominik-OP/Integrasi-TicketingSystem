@@ -124,15 +124,16 @@ export default function Workspace({
     tickets,
     setTickets,
     ready,
+    reload,
   } = useWorkspaceData(setToast);
 
-  const { user, signedIn, setSignedIn, setUserId, can, canManage, canSettings } = useAuth(
+  const { user, signedIn, can, canManage, canSettings, signIn, signOut } = useAuth(
     team,
     roles,
     ready
   );
 
-  const { changeTicket, moveTicket, submitTicket } = useTickets(
+  const { changeTicket, moveTicket } = useTickets(
     team,
     tickets,
     setTickets,
@@ -142,7 +143,8 @@ export default function Workspace({
     user.id,
     setToast,
     setResolutionEdit,
-    setClosureEdit
+    setClosureEdit,
+    reload
   );
 
   const visibleTickets = tickets.filter(
@@ -236,20 +238,19 @@ export default function Workspace({
       projects={projects}
       projectId={view === 'submit' ? publicProjectId : projectId}
       publicForm={view === 'submit'}
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         const files = fd
           .getAll('attachments')
           .filter((f): f is File => f instanceof File && !!f.name);
-        const now = new Date().toISOString();
         const project = projects.find(
           (p) => p.id === (view === 'submit' ? publicProjectId : fd.get('project')) && p.active
         );
         const chosenCategory = categories.find(
           (c) => c.name === fd.get('category') && c.active !== false
         );
-        if (!project || !chosenCategory) return;
+        if (!project || (view !== 'submit' && !chosenCategory)) return;
         if (
           !['title', 'description', 'name', 'email'].every((key) =>
             String(fd.get(key) ?? '').trim()
@@ -268,37 +269,25 @@ export default function Workspace({
           setToast('Lampiran harus PNG, JPG, WebP, atau PDF maksimal 5 MB per file.');
           return;
         }
-        const newTicket = submitTicket({
-          projectId: project.id,
-          ...(view !== 'submit' ? { createdBy: user.id } : {}),
-          impact: String(fd.get('impact') ?? ''),
-          title: String(fd.get('title')).trim(),
-          description: String(fd.get('description')).trim(),
-          name: String(fd.get('name')).trim(),
-          email: String(fd.get('email')).trim().toLowerCase(),
-          category: String(fd.get('category')),
-          priority: chosenCategory.priority,
-          status: 'New / Open',
-          agent: '',
-          reviewer: '',
-          attachments: files.map((f) => f.name),
-          history: [
-            {
-              text:
-                view === 'submit' ? 'Tiket dibuat oleh pelapor' : 'Tiket dibuat oleh tim support',
-              at: now,
-              ...(view !== 'submit' ? { actorId: user.id } : {}),
-              actorName: view === 'submit' ? String(fd.get('name')).trim() : user.name,
-              actorRole: view === 'submit' ? 'Pelapor' : roleLabel(user, roles),
-            },
-          ],
+        fd.set('project', project.id);
+        const response = await fetch('/api/public/tickets', {
+          method: 'POST',
+          headers: { 'idempotency-key': crypto.randomUUID() },
+          body: fd,
         });
-        if (!newTicket.title || !newTicket.name || !newTicket.description) return;
+        const result = await response.json();
+        if (!response.ok) {
+          setToast(result.error ?? 'Laporan gagal disimpan.');
+          return;
+        }
+        const newTicket: Ticket = result.ticket;
+        if (result.attachmentWarning) setToast(result.attachmentWarning);
         if (view === 'submit') setSubmitted(newTicket);
         else {
           setCreating(false);
           setProjectId(project.id);
           setSelected(newTicket.id);
+          await reload();
           setToast('Tiket berhasil dibuat.');
         }
       }}
@@ -378,20 +367,8 @@ export default function Workspace({
       <>
         <PublicPortal
           view={view}
-          tickets={tickets}
           projects={projects}
-          team={team}
-          roles={roles}
-          userId={user.id}
-          setUserId={setUserId}
-          onLogin={() => {
-            if (!team.some((m) => m.id === user.id && m.active)) return;
-            setSignedIn(true);
-            try {
-              sessionStorage.setItem('integrasi-session', user.id);
-            } catch {}
-            navigate('board');
-          }}
+          signIn={signIn}
           navigate={navigate}
           submitted={submitted}
           clearSubmitted={() => setSubmitted(null)}
@@ -488,12 +465,9 @@ export default function Workspace({
                 <small>{roleLabel(user, roles)}</small>
               </div>
               <button
-                title="Keluar / ganti akun demo"
-                onClick={() => {
-                  setSignedIn(false);
-                  try {
-                    sessionStorage.removeItem('integrasi-session');
-                  } catch {}
+                title="Keluar"
+                onClick={async () => {
+                  await signOut();
                   navigate('login');
                 }}
               >
@@ -1025,8 +999,14 @@ export default function Workspace({
             {activeTicket.attachments.map((a, i) => (
               <div className="attachment" key={i}>
                 <Paperclip size={15} />
-                {a}
-                <small>Metadata demo</small>
+                {a.url ? (
+                  <a href={a.url} target="_blank" rel="noreferrer">
+                    {a.name}
+                  </a>
+                ) : (
+                  a.name
+                )}
+                <small>{a.url ? 'Lampiran tersimpan' : 'Tautan tidak tersedia'}</small>
               </div>
             ))}
           </section>

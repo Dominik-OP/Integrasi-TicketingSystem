@@ -21,6 +21,7 @@ export type Member = {
   overrides?: Partial<Record<Permission, boolean>>;
 };
 export type Category = {
+  id?: string;
   name: string;
   priority: string;
   response: number;
@@ -43,7 +44,13 @@ export type Closure = {
   author: string;
   authorRole: string;
 };
+export type TicketAttachment = {
+  name: string;
+  url?: string;
+};
 export type Ticket = {
+  databaseId?: string;
+  version?: number;
   projectId?: string;
   trackingToken?: string;
   impact?: string;
@@ -60,7 +67,7 @@ export type Ticket = {
   reviewer: string;
   created: string;
   updated: string;
-  attachments: string[];
+  attachments: TicketAttachment[];
   resolution?: Resolution;
   closure?: Closure;
   history: {
@@ -162,7 +169,7 @@ export function seedTickets(): Ticket[] {
       reviewer: i > 2 ? '2' : '',
       created,
       updated: created,
-      attachments: i % 4 === 0 ? ['screenshot-kendala.png'] : [],
+      attachments: i % 4 === 0 ? [{ name: 'screenshot-kendala.png' }] : [],
       comments: [],
       history: [
         {

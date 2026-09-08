@@ -2,7 +2,7 @@
 import Select from '@/components/ui/Select';
 import type { Category } from '@/lib/demo';
 import type { Project } from '@/lib/projects';
-import { Info, Layers3, Paperclip, Send } from 'lucide-react';
+import { Layers3, Paperclip, Send } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 export const impacts = [
@@ -31,8 +31,9 @@ export default function TicketForm({
   );
   const selected = activeCategories.find((c) => c.name === chosen);
   const fixedProject = activeProjects.find((p) => p.id === projectId);
-  const available =
-    activeCategories.length > 0 && (publicForm ? !!fixedProject : activeProjects.length > 0);
+  const available = publicForm
+    ? !!fixedProject
+    : activeCategories.length > 0 && activeProjects.length > 0;
   return (
     <form onSubmit={onSubmit} className="form-stack ticket-form-v2">
       {publicForm && fixedProject && (
@@ -50,6 +51,27 @@ export default function TicketForm({
       <div className="form-section-label">
         <span>01</span> Tentang laporan Anda
       </div>
+      <label>
+        Judul laporan
+        <input
+          name="title"
+          required
+          minLength={5}
+          maxLength={140}
+          placeholder="Ringkas kendala yang Anda alami"
+        />
+      </label>
+      <label>
+        Deskripsi
+        <textarea
+          name="description"
+          required
+          minLength={10}
+          maxLength={10000}
+          rows={4}
+          placeholder="Apa yang terjadi? Jelaskan langkah dan hasil yang Anda harapkan…"
+        />
+      </label>
       {publicForm ? (
         <input type="hidden" name="project" value={fixedProject?.id ?? ''} />
       ) : (
@@ -75,24 +97,27 @@ export default function TicketForm({
           </div>
         </>
       )}
-      <label>
-        Kategori masalah
-        <Select name="category" required value={chosen} onChange={(e) => setChosen(e.target.value)}>
-          {activeCategories.map((c) => (
-            <option key={c.name}>{c.name}</option>
-          ))}
-        </Select>
-      </label>
-      <div className="priority-auto">
-        <Info size={17} />
-        <div>
-          <strong>Prioritas ditentukan oleh tim support</strong>
-          <p>Otomatis dari kategori, lalu dikonfirmasi reviewer saat triase.</p>
-        </div>
-        <span className={`priority ${selected?.priority.toLowerCase()}`}>
-          {selected?.priority ?? '—'}
-        </span>
-      </div>
+      {!publicForm && (
+        <>
+          <label>
+            Kategori masalah
+            <Select
+              name="category"
+              required
+              value={chosen}
+              onChange={(e) => setChosen(e.target.value)}
+            >
+              {activeCategories.map((c) => (
+                <option key={c.name}>{c.name}</option>
+              ))}
+            </Select>
+          </label>
+          <p className="muted small-text">
+            Prioritas awal mengikuti kategori dan dapat dikonfirmasi saat triase:{' '}
+            {selected?.priority ?? '—'}.
+          </p>
+        </>
+      )}
       <fieldset className="impact-options">
         <legend>
           Seberapa besar dampaknya? <span>Opsional</span>
@@ -115,27 +140,6 @@ export default function TicketForm({
           </label>
         ))}
       </fieldset>
-      <label>
-        Judul laporan
-        <input
-          name="title"
-          required
-          minLength={5}
-          maxLength={140}
-          placeholder="Ringkas kendala yang Anda alami"
-        />
-      </label>
-      <label>
-        Deskripsi
-        <textarea
-          name="description"
-          required
-          minLength={10}
-          maxLength={10000}
-          rows={4}
-          placeholder="Apa yang terjadi? Jelaskan langkah dan hasil yang Anda harapkan…"
-        />
-      </label>
       <label className="upload">
         <Paperclip size={21} />
         <strong>Tambahkan lampiran</strong>
@@ -161,9 +165,8 @@ export default function TicketForm({
         </label>
       </div>
       <p className="muted small-text">
-        Tidak perlu akun. Nantinya, link pribadi untuk melacak tiket dikirim ke email ini. Pada
-        demo, link tersedia setelah laporan dibuat dan hanya bekerja di browser ini; lampiran
-        disimpan sebagai nama file.
+        Tidak perlu akun. Setelah laporan dibuat, simpan link pribadi yang tersedia untuk melacak
+        progres tiket Anda.
       </p>
       {!available && (
         <p role="alert" className="error-text">
