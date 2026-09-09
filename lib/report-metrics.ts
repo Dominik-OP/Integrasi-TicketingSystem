@@ -1,4 +1,4 @@
-import type { Category, Ticket } from './demo';
+import type { Category, Ticket } from './domain';
 
 export const closedAt = (ticket: Ticket) =>
   ticket.closure?.at ??

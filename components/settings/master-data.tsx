@@ -1,6 +1,6 @@
 'use client';
 import Select from '@/components/ui/Select';
-import type { Member, Role, Ticket } from '@/lib/demo';
+import type { Member, Role, Ticket } from '@/lib/domain';
 import { defaults, permissionList, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { dayKey, nextTicketNumber, type Project } from '@/lib/projects';
 import { ArrowRight, Check, Layers3, Plus, ShieldCheck, X } from 'lucide-react';

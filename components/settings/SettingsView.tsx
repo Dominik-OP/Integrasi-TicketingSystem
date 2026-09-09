@@ -1,10 +1,10 @@
 'use client';
 import { ProjectSettings, RoleSettings } from '@/components/settings/master-data';
 import { Empty } from '@/components/ui';
-import { type Category, type Member, type Ticket } from '@/lib/demo';
+import { type Category, type Member, type Ticket } from '@/lib/domain';
 import { can, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
-import { LockKeyhole, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface SettingsViewProps {
   settingsTab: string;
@@ -140,20 +140,6 @@ export default function SettingsView({
                   ))}
                 </tbody>
               </table>
-            </div>
-          </section>
-          <section className="panel settings-info">
-            <h2>Ruang kerja</h2>
-            <label>
-              Nama aplikasi
-              <input value="Integrasi - Ticketing System" readOnly />
-            </label>
-            <div className="info-box">
-              <LockKeyhole size={20} />
-              <p>
-                Frontend preview menggunakan penyimpanan lokal. Database, autentikasi, email,
-                unggahan file, dan otomatisasi SLA akan dihubungkan pada tahap integrasi.
-              </p>
             </div>
           </section>
         </>

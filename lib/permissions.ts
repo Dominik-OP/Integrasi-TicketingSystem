@@ -1,4 +1,4 @@
-import type { Member, Role, Ticket } from './demo';
+import type { Member, Role, Ticket } from './domain';
 
 export const permissionList = [
   {

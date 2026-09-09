@@ -1,7 +1,7 @@
 'use client';
 import { Empty } from '@/components/ui';
 import TicketFilters from '@/components/ui/TicketFilters';
-import { date, priorityClass, type Category, type Member, type Ticket } from '@/lib/demo';
+import { date, priorityClass, type Category, type Member, type Ticket } from '@/lib/domain';
 import { roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
 

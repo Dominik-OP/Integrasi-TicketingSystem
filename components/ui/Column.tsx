@@ -1,5 +1,5 @@
 'use client';
-import { type Status } from '@/lib/demo';
+import { type Status } from '@/lib/domain';
 import { useDroppable } from '@dnd-kit/core';
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';

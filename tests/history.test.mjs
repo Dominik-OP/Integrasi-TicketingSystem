@@ -2,26 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeHistory } from '../lib/history.ts';
 
-const member = { id: '2', name: 'Nadia Putri' };
+const member = { id: '2', name: 'Pengguna Uji' };
 test('Legacy activity with a named actor receives their custom role', () => {
   const ticket = {
     name: 'Budi',
     history: [
       {
-        text: 'Status diubah menjadi On Review · Nadia Putri',
+        text: 'Status diubah menjadi On Review · Pengguna Uji',
         at: '2026-09-07',
       },
     ],
   };
   const [event] = upgradeHistory(ticket, [member], () => 'Team Lead');
-  assert.equal(event.actorName, 'Nadia Putri');
+  assert.equal(event.actorName, 'Pengguna Uji');
   assert.equal(event.actorRole, 'Team Lead');
   assert.equal(event.text, 'Status diubah menjadi On Review');
 });
 test('Recorded role remains unchanged after master role is renamed', () => {
   const event = {
     text: 'Status diubah menjadi On Review',
-    actorName: 'Nadia Putri',
+    actorName: 'Pengguna Uji',
     actorRole: 'Team Lead',
     at: '2026-09-07',
   };

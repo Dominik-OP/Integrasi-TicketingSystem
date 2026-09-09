@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Category, Member, Status, Ticket } from '@/lib/demo';
+import type { Category, Member, Status, TeamAccessRequest, Ticket } from '@/lib/domain';
 import type { Permission, RoleDefinition } from '@/lib/permissions';
 import type { Project } from '@/lib/projects';
 
@@ -41,6 +41,12 @@ export function mapWorkspace(
         .filter((item: any) => item.user_id === member.user_id)
         .map((item: any) => [item.permission_key, item.allowed])
     ),
+  }));
+  const accessRequests: TeamAccessRequest[] = (raw.accessRequests ?? []).map((request: any) => ({
+    userId: request.user_id,
+    name: request.display_name,
+    email: request.email,
+    requestedAt: request.requested_at,
   }));
   const projects: Project[] = raw.projects.map((project: any) => ({
     id: project.slug,
@@ -125,7 +131,7 @@ export function mapWorkspace(
         internal: item.visibility === 'internal',
       })),
   }));
-  return { team, roles, projects, categories, tickets };
+  return { team, accessRequests, roles, projects, categories, tickets };
 }
 
 export const statusValues: Record<Status, string> = Object.fromEntries(

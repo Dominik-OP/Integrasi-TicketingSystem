@@ -145,9 +145,6 @@
 .topbar-right .notification-button {
   order: 0;
 }
-.topbar-right .demo-pill {
-  order: -1;
-}
 .topbar-right .notification-button {
   border-right: 0;
   padding-right: 0;

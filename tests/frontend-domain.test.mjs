@@ -8,7 +8,12 @@ import {
   canUpdateTicket,
   roleLabel,
 } from '../lib/permissions.ts';
-import { defaultProjects, nextTicketNumber, dayKey } from '../lib/projects.ts';
+import { nextTicketNumber, dayKey } from '../lib/projects.ts';
+
+const projects = [
+  { id: 'app', name: 'App Test', prefix: 'APP', description: '', active: true },
+  { id: 'web', name: 'Web Test', prefix: 'WEB', description: '', active: true },
+];
 
 const agent = {
   id: 'a',
@@ -62,10 +67,10 @@ test('Sequence is independent per project and resets each Jakarta day', () => {
     { id: 'WEB-20260907-0042', projectId: 'web' },
     { id: 'APP-20260906-0099', projectId: 'app' },
   ];
-  assert.equal(nextTicketNumber(defaultProjects[0], tickets, now), 'APP-20260907-0002');
-  assert.equal(nextTicketNumber(defaultProjects[1], tickets, now), 'WEB-20260907-0043');
+  assert.equal(nextTicketNumber(projects[0], tickets, now), 'APP-20260907-0002');
+  assert.equal(nextTicketNumber(projects[1], tickets, now), 'WEB-20260907-0043');
   assert.equal(
-    nextTicketNumber(defaultProjects[0], tickets, new Date('2026-09-07T17:00:00Z')),
+    nextTicketNumber(projects[0], tickets, new Date('2026-09-07T17:00:00Z')),
     'APP-20260908-0001'
   );
   assert.equal(dayKey(new Date('2026-09-07T17:00:00Z')), '20260908');
@@ -73,7 +78,7 @@ test('Sequence is independent per project and resets each Jakarta day', () => {
 test('Changing prefix preserves sequence for existing project tickets', () => {
   assert.equal(
     nextTicketNumber(
-      { ...defaultProjects[0], prefix: 'NEW' },
+      { ...projects[0], prefix: 'NEW' },
       [own],
       new Date('2026-09-07T10:00:00+07:00')
     ),

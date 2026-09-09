@@ -1,5 +1,5 @@
 'use client';
-import type { Role } from '@/lib/demo';
+import type { Role } from '@/lib/domain';
 import { Check, Pencil, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessLabels, type AccessLabels } from '../preferences';

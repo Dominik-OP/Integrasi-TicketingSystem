@@ -1,6 +1,6 @@
 import { statusValues } from '@/lib/insforge/mapping';
 import { adminClient, currentMember } from '@/lib/insforge/server';
-import type { Status } from '@/lib/demo';
+import type { Status } from '@/lib/domain';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {

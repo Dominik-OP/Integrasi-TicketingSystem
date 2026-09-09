@@ -1,6 +1,6 @@
 'use client';
 import Select from '@/components/ui/Select';
-import type { Category } from '@/lib/demo';
+import type { Category } from '@/lib/domain';
 import type { Project } from '@/lib/projects';
 import { Layers3, Paperclip, Send } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
@@ -25,11 +25,11 @@ export default function TicketForm({
 }) {
   const activeCategories = categories.filter((c) => c.active !== false);
   const [chosen, setChosen] = useState(activeCategories[0]?.name ?? '');
+  const [priority, setPriority] = useState(activeCategories[0]?.priority ?? 'Medium');
   const activeProjects = projects.filter((p) => p.active);
   const [project, setProject] = useState(
     activeProjects.find((p) => p.id === projectId)?.id ?? activeProjects[0]?.id ?? ''
   );
-  const selected = activeCategories.find((c) => c.name === chosen);
   const fixedProject = activeProjects.find((p) => p.id === projectId);
   const available = publicForm
     ? !!fixedProject
@@ -105,17 +105,32 @@ export default function TicketForm({
               name="category"
               required
               value={chosen}
-              onChange={(e) => setChosen(e.target.value)}
+              onChange={(e) => {
+                const category = activeCategories.find((item) => item.name === e.target.value);
+                setChosen(e.target.value);
+                setPriority(category?.priority ?? 'Medium');
+              }}
             >
               {activeCategories.map((c) => (
                 <option key={c.name}>{c.name}</option>
               ))}
             </Select>
           </label>
-          <p className="muted small-text">
-            Prioritas awal mengikuti kategori dan dapat dikonfirmasi saat triase:{' '}
-            {selected?.priority ?? '—'}.
-          </p>
+          <label>
+            Prioritas
+            <Select
+              name="priority"
+              required
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+            >
+              {['Urgent', 'High', 'Medium', 'Low'].map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </Select>
+          </label>
         </>
       )}
       <fieldset className="impact-options">

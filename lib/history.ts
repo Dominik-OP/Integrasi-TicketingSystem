@@ -1,4 +1,4 @@
-import type { Member, Ticket } from './demo';
+import type { Member, Ticket } from './domain';
 
 export function upgradeHistory(
   ticket: Ticket,

@@ -50,5 +50,6 @@ export async function loadWorkspaceRaw(client: InsForgeClient) {
     events,
     comments,
     attachments,
+    accessRequests: [] as Record<string, unknown>[],
   };
 }

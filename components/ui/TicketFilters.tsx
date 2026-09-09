@@ -1,5 +1,5 @@
 'use client';
-import { statuses, type Category, type Member } from '@/lib/demo';
+import { statuses, type Category, type Member } from '@/lib/domain';
 import { roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { LayoutDashboard, Search, Tickets, X } from 'lucide-react';
 import FilterDropdown from './FilterDropdown';

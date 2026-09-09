@@ -42,3 +42,11 @@ export async function currentMember() {
   if (error || !data) return null;
   return { user, member: data };
 }
+
+export async function hasServerPermission(userId: string, permission: string) {
+  const { data, error } = await adminClient().database.rpc('has_permission_for_user', {
+    p_user_id: userId,
+    p_permission_key: permission,
+  });
+  return !error && data === true;
+}

@@ -1,4 +1,4 @@
-import { date, type Ticket } from '@/lib/demo';
+import { date, type Ticket } from '@/lib/domain';
 
 export default function TicketHistory({ history }: { history: Ticket['history'] }) {
   return (

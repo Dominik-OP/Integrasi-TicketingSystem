@@ -1,5 +1,5 @@
 'use client';
-import { type Member, type Ticket } from '@/lib/demo';
+import { type Member, type Ticket } from '@/lib/domain';
 import { useCallback, useMemo, useState } from 'react';
 
 interface FilterState {

@@ -1,5 +1,5 @@
 'use client';
-import { date, type Member, type Ticket } from '@/lib/demo';
+import { date, type Member, type Ticket } from '@/lib/domain';
 import { roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
 import { closedAt } from '@/lib/report-metrics';

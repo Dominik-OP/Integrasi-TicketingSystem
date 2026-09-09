@@ -1,11 +1,12 @@
 'use client';
-import type { Category, Member, Ticket } from '@/lib/demo';
+import type { Category, Member, TeamAccessRequest, Ticket } from '@/lib/domain';
 import type { RoleDefinition } from '@/lib/permissions';
 import type { Project } from '@/lib/projects';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useWorkspaceData(notify: (message: string) => void) {
   const [team, setTeam] = useState<Member[]>([]);
+  const [accessRequests, setAccessRequests] = useState<TeamAccessRequest[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
@@ -18,6 +19,7 @@ export function useWorkspaceData(notify: (message: string) => void) {
       if (workspace.ok) {
         const data = await workspace.json();
         setTeam(data.team ?? []);
+        setAccessRequests(data.accessRequests ?? []);
         setCategories(data.categories ?? []);
         setProjects(data.projects ?? []);
         setRoles(data.roles ?? []);
@@ -28,6 +30,7 @@ export function useWorkspaceData(notify: (message: string) => void) {
         if (!response.ok) throw new Error(data.error);
         setProjects(data.projects ?? []);
         setTeam([]);
+        setAccessRequests([]);
         setCategories([]);
         setRoles([]);
         setTickets([]);
@@ -46,6 +49,7 @@ export function useWorkspaceData(notify: (message: string) => void) {
   return {
     team,
     setTeam,
+    accessRequests,
     categories,
     setCategories,
     projects,

@@ -1,4 +1,4 @@
-import type { Ticket } from './demo';
+import type { Ticket } from './domain';
 export type Project = {
   id: string;
   databaseId?: string;
@@ -7,29 +7,6 @@ export type Project = {
   description: string;
   active: boolean;
 };
-export const defaultProjects: Project[] = [
-  {
-    id: 'app',
-    name: 'Aplikasi Utama',
-    prefix: 'APP',
-    description: 'Aplikasi operasional dan layanan utama.',
-    active: true,
-  },
-  {
-    id: 'web',
-    name: 'Website',
-    prefix: 'WEB',
-    description: 'Website publik dan pengalaman pelanggan.',
-    active: true,
-  },
-  {
-    id: 'internal',
-    name: 'Internal Tools',
-    prefix: 'INT',
-    description: 'Perangkat kerja internal untuk tim.',
-    active: true,
-  },
-];
 export function dayKey(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Jakarta',

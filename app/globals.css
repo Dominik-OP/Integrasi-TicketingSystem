@@ -293,12 +293,6 @@ small {
   font-size: 10px;
   font-weight: 600;
 }
-.sidebar-track {
-  font-size: 11px;
-  color: #7b877d;
-  margin: 23px 8px;
-  gap: 10px;
-}
 .profile {
   border-top: 1px solid var(--line);
   padding: 19px 3px;
@@ -380,14 +374,6 @@ small {
   align-items: center;
   gap: 22px;
 }
-.demo-pill {
-  font-size: 10px;
-  color: #6e8b74;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.demo-pill > span,
 .live-dot {
   display: inline-block;
   width: 5px;
@@ -1383,11 +1369,36 @@ tbody tr:hover {
   font-size: 14px;
 }
 .member-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 9px;
   color: #7e9c68;
   background: #eff5e9;
   border-radius: 20px;
   padding: 5px 8px;
+}
+.access-requests {
+  margin-bottom: 28px;
+}
+.access-requests > h2 {
+  font-size: 17px;
+  margin-bottom: 14px;
+}
+.access-requests .member-card label {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.access-requests .member-bottom {
+  justify-content: flex-end;
+}
+.access-requests .member-bottom .primary {
+  min-height: 30px;
+  padding: 7px 10px;
+  font-size: 10px;
 }
 .member-status.inactive {
   color: #a59e91;
@@ -1741,9 +1752,6 @@ tbody tr:hover {
   }
   .notification-button i {
     right: 10px;
-  }
-  .demo-pill {
-    font-size: 9px;
   }
   .main-content {
     padding: 25px 16px 0;

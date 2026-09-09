@@ -1,6 +1,7 @@
 'use client';
-import type { Ticket } from '@/lib/demo';
-import { date } from '@/lib/demo';
+import type { Ticket } from '@/lib/domain';
+import { date } from '@/lib/domain';
+import type { TeamAccessStatus } from '@/lib/auth/access';
 import type { Project } from '@/lib/projects';
 import {
   ArrowLeft,
@@ -19,7 +20,8 @@ import TicketHistory from './ticket-history';
 type Props = {
   view: string;
   projects: Project[];
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, otp?: string) => Promise<TeamAccessStatus | 'code_sent'>;
+  accessStatus: TeamAccessStatus;
   navigate: (view: string) => void;
   submitted: Ticket | null;
   clearSubmitted: () => void;
@@ -32,6 +34,7 @@ export default function PublicPortal({
   view,
   projects,
   signIn,
+  accessStatus,
   navigate,
   submitted,
   clearSubmitted,
@@ -41,6 +44,8 @@ export default function PublicPortal({
 }: Props) {
   const [tracked, setTracked] = useState<Ticket | null>(null),
     [error, setError] = useState(''),
+    [loginEmail, setLoginEmail] = useState(''),
+    [codeSent, setCodeSent] = useState(false),
     [authBusy, setAuthBusy] = useState(false);
   useEffect(() => {
     setTracked(null);
@@ -130,7 +135,7 @@ export default function PublicPortal({
         )}
         <section className="public-card">
           {!ready ? (
-            <p className="muted">Memuat data demo…</p>
+            <p className="muted">Memuat data…</p>
           ) : view === 'submit' ? (
             submitted ? (
               <div className="success">
@@ -150,60 +155,102 @@ export default function PublicPortal({
               form
             )
           ) : view === 'login' ? (
-            <form
-              className="form-stack"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                setAuthBusy(true);
-                setError('');
-                try {
-                  await signIn(String(fd.get('email')), String(fd.get('password')));
-                  window.location.assign('/');
-                } catch (reason) {
-                  setError(reason instanceof Error ? reason.message : 'Proses masuk gagal.');
-                } finally {
-                  setAuthBusy(false);
-                }
-              }}
-            >
-              <div className="login-emblem">
-                <LockKeyhole size={25} />
-              </div>
-              <h2>Masuk sebagai anggota tim</h2>
-              <label>
-                Email tim
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="nama@perusahaan.com"
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  autoComplete="current-password"
-                  placeholder="Minimal 6 karakter"
-                />
-              </label>
-              <p className="muted small-text">
-                Pada setup fresh, email dan password pertama otomatis membuat akun Admin.
-              </p>
-              {error && (
-                <p role="alert" className="error-text">
-                  {error}
+            accessStatus === 'pending' ? (
+              <div className="success">
+                <LockKeyhole size={42} />
+                <h2>Menunggu persetujuan Admin</h2>
+                <p>
+                  Email kantor Anda sudah terverifikasi. Admin perlu memilih role sebelum akses
+                  dibuka.
                 </p>
-              )}
-              <button className="primary" disabled={authBusy}>
-                {authBusy ? 'Memproses…' : 'Masuk ke workspace'} <ArrowRight size={16} />
-              </button>
-            </form>
+              </div>
+            ) : accessStatus === 'rejected' ? (
+              <div className="success">
+                <LockKeyhole size={42} />
+                <h2>Permintaan akses ditolak</h2>
+                <p>Hubungi Admin bila akses workspace masih diperlukan.</p>
+              </div>
+            ) : accessStatus === 'inactive' ? (
+              <div className="success">
+                <LockKeyhole size={42} />
+                <h2>Akun tim nonaktif</h2>
+                <p>Hubungi Admin untuk mengaktifkan kembali akses.</p>
+              </div>
+            ) : (
+              <form
+                className="form-stack"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const formData = new FormData(event.currentTarget);
+                  const email = String(formData.get('email') ?? loginEmail)
+                    .trim()
+                    .toLowerCase();
+                  const otp = codeSent ? String(formData.get('otp') ?? '') : undefined;
+                  setAuthBusy(true);
+                  setError('');
+                  try {
+                    const status = await signIn(email, otp);
+                    setLoginEmail(email);
+                    if (status === 'code_sent') setCodeSent(true);
+                    else if (status === 'active') window.location.assign('/');
+                  } catch (reason) {
+                    setError(reason instanceof Error ? reason.message : 'Proses masuk gagal.');
+                  } finally {
+                    setAuthBusy(false);
+                  }
+                }}
+              >
+                <div className="login-emblem">
+                  <LockKeyhole size={25} />
+                </div>
+                <h2>Masuk sebagai anggota tim</h2>
+                <p className="muted small-text">
+                  Kami kirim kode masuk 6 digit ke email kantor Anda.
+                </p>
+                <label>
+                  Email kantor
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    readOnly={codeSent}
+                    autoComplete="email"
+                    value={loginEmail}
+                    onChange={(event) => setLoginEmail(event.target.value)}
+                    placeholder="Email kantor"
+                  />
+                </label>
+                {codeSent && (
+                  <label>
+                    Kode masuk
+                    <input
+                      name="otp"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      placeholder="000000"
+                    />
+                  </label>
+                )}
+                {error && (
+                  <p role="alert" className="error-text">
+                    {error}
+                  </p>
+                )}
+                <button className="primary" disabled={authBusy}>
+                  {authBusy ? 'Memproses…' : codeSent ? 'Verifikasi kode' : 'Kirim kode masuk'}{' '}
+                  <ArrowRight size={16} />
+                </button>
+                {codeSent && (
+                  <button type="button" onClick={() => setCodeSent(false)} disabled={authBusy}>
+                    Ganti email
+                  </button>
+                )}
+              </form>
+            )
           ) : (
             <>
               {!token && (

@@ -353,7 +353,6 @@
 :root[data-theme='dark']
   :is(
     .sidebar nav button,
-    .sidebar-track,
     .breadcrumb,
     .breadcrumb strong,
     .page-heading p,
@@ -367,7 +366,6 @@
     .heading-dot,
     .team-presence > span,
     .board-footer,
-    .demo-pill,
     .help-card p,
     .filter-selects,
     .filter-selects select,

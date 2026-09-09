@@ -1,7 +1,7 @@
 'use client';
 import { Empty } from '@/components/ui';
 import Select from '@/components/ui/Select';
-import { type Category, type Member, type Ticket } from '@/lib/demo';
+import { type Category, type Member, type Ticket } from '@/lib/domain';
 import { baseRole, roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
 import { CalendarDays } from 'lucide-react';
@@ -94,7 +94,7 @@ export default function ReportsView({
             </option>
           ))}
         </Select>
-        <span className="muted">Berdasarkan {reportTickets.length} tiket demo</span>
+        <span className="muted">Berdasarkan {reportTickets.length} tiket</span>
       </div>
 
       <div className="stats-grid">

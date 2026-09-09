@@ -1,20 +1,43 @@
-import { adminClient, currentMember } from '@/lib/insforge/server';
+import { adminClient, currentUser } from '@/lib/insforge/server';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const context = await currentMember();
-  if (!context) return NextResponse.json({ user: null }, { status: 401 });
-  const { data: role } = await adminClient()
-    .database.from('roles')
+  const user = await currentUser();
+  if (!user) {
+    return NextResponse.json({ user: null, accessStatus: 'unauthenticated' }, { status: 401 });
+  }
+
+  const admin = adminClient();
+  const { data: member } = await admin.database
+    .from('team_members')
+    .select('user_id, role_id, display_name, email, is_active')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!member?.is_active) {
+    const { data: accessRequest } = await admin.database
+      .from('team_access_requests')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    return NextResponse.json({
+      user: null,
+      accessStatus: member ? 'inactive' : (accessRequest?.status ?? 'unauthorized'),
+    });
+  }
+
+  const { data: role } = await admin.database
+    .from('roles')
     .select('id, name, access_level_key')
-    .eq('id', context.member.role_id)
+    .eq('id', member.role_id)
     .maybeSingle();
   return NextResponse.json({
+    accessStatus: 'active',
     user: {
-      id: context.member.user_id,
-      name: context.member.display_name,
-      email: context.member.email,
-      roleId: context.member.role_id,
+      id: member.user_id,
+      name: member.display_name,
+      email: member.email,
+      roleId: member.role_id,
       role:
         role?.access_level_key === 'admin'
           ? 'Admin'

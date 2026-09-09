@@ -23,6 +23,10 @@ export async function POST(request: Request) {
   const title = String(input.title ?? '').trim();
   const description = String(input.description ?? '').trim();
   const impact = String(input.impact ?? '').trim();
+  const requestedCategory = String(input.category ?? '').trim();
+  const requestedPriority = String(input.priority ?? '')
+    .trim()
+    .toLowerCase();
   if (
     !projectSlug ||
     title.length < 5 ||
@@ -45,13 +49,31 @@ export async function POST(request: Request) {
     }
   }
 
+  const member = await currentMember();
+  let categoryId: string | null = null;
+  if (member) {
+    if (!requestedCategory || !['low', 'medium', 'high', 'urgent'].includes(requestedPriority)) {
+      return NextResponse.json({ error: 'Pilih kategori dan prioritas tiket.' }, { status: 400 });
+    }
+    const { data: category, error: categoryError } = await adminClient()
+      .database.from('categories')
+      .select('id')
+      .eq('name', requestedCategory)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (categoryError || !category) {
+      return NextResponse.json({ error: 'Kategori tidak tersedia.' }, { status: 400 });
+    }
+    categoryId = category.id;
+  }
+
   const trackingToken = randomBytes(32).toString('hex');
   const tokenHash = createHash('sha256').update(trackingToken).digest('hex');
-  const member = await currentMember();
   const admin = adminClient();
-  const { data, error } = await admin.database.rpc('create_ticket', {
+  const rpcName = member ? 'create_team_ticket' : 'create_ticket';
+  const rpcInput = {
     p_project_slug: projectSlug,
-    p_category_id: null,
+    p_category_id: categoryId,
     p_reporter_name: reporterName,
     p_reporter_email: reporterEmail,
     p_title: title,
@@ -61,7 +83,9 @@ export async function POST(request: Request) {
     p_tracking_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     p_idempotency_key: request.headers.get('idempotency-key') || randomUUID(),
     p_created_by_user_id: member?.user.id ?? null,
-  });
+    ...(member ? { p_priority: requestedPriority } : {}),
+  };
+  const { data, error } = await admin.database.rpc(rpcName, rpcInput);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   const ticket = Array.isArray(data) ? data[0] : data;
   const extensions: Record<string, string> = {
@@ -121,7 +145,7 @@ export async function POST(request: Request) {
         name: ticket.reporter_name,
         email: ticket.reporter_email,
         category: ticket.category_name_snapshot,
-        priority: 'Medium',
+        priority: ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1),
         status: 'New / Open',
         agent: '',
         reviewer: '',

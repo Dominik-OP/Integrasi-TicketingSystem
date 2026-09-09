@@ -19,7 +19,7 @@ import {
   type Member,
   type Status,
   type Ticket,
-} from '@/lib/demo';
+} from '@/lib/domain';
 import {
   baseRole,
   canUpdateTicket,
@@ -28,7 +28,6 @@ import {
   roleLabel,
 } from '@/lib/permissions';
 import {
-  ArrowUpRight,
   Bell,
   ChartNoAxesCombined,
   Check,
@@ -42,7 +41,6 @@ import {
   LogOut,
   Menu,
   Paperclip,
-  Plus,
   Search,
   Send,
   Settings,
@@ -115,6 +113,7 @@ export default function Workspace({
   const {
     team,
     setTeam,
+    accessRequests,
     categories,
     setCategories,
     projects,
@@ -127,11 +126,17 @@ export default function Workspace({
     reload,
   } = useWorkspaceData(setToast);
 
-  const { user, signedIn, can, canManage, canSettings, signIn, signOut } = useAuth(
-    team,
-    roles,
-    ready
-  );
+  const {
+    user,
+    signedIn,
+    accessStatus,
+    authLoading,
+    can,
+    canManage,
+    canSettings,
+    signIn,
+    signOut,
+  } = useAuth(team, roles, ready);
 
   const { changeTicket, moveTicket } = useTickets(
     team,
@@ -355,7 +360,7 @@ export default function Workspace({
     URL.revokeObjectURL(url);
   };
 
-  if (!ready)
+  if (!ready || authLoading)
     return (
       <div role="status" className="empty">
         Memuat workspace…
@@ -369,6 +374,7 @@ export default function Workspace({
           view={view}
           projects={projects}
           signIn={signIn}
+          accessStatus={accessStatus}
           navigate={navigate}
           submitted={submitted}
           clearSubmitted={() => setSubmitted(null)}
@@ -451,13 +457,10 @@ export default function Workspace({
               </span>
               <strong>Support yang lebih terhubung.</strong>
               <p>Bagikan portal bantuan agar setiap kendala punya solusi.</p>
-              <button onClick={() => navigate('submit')}>
-                Buka portal bantuan <ArrowUpRight size={15} />
+              <button onClick={() => navigate('track')}>
+                <Search size={18} /> Lacak tiket publik <ExternalLink size={13} />
               </button>
             </div>
-            <button className="sidebar-track" onClick={() => navigate('track')}>
-              <Search size={18} /> Lacak tiket publik <ExternalLink size={13} />
-            </button>
             <div className="profile">
               <Avatar name={user.name} />
               <div>
@@ -493,9 +496,6 @@ export default function Workspace({
             </div>
             <div className="topbar-right">
               <ThemeToggle />
-              <span className="demo-pill">
-                <span /> Mode demo
-              </span>
               <button
                 className="notification-button"
                 aria-label="Notifikasi"
@@ -535,7 +535,7 @@ export default function Workspace({
                           : 'Sesuaikan alur support dengan kebutuhan tim Anda.'}
                 </p>
               </div>
-              {['board', 'tickets'].includes(view) && (
+              {view === 'board' && (
                 <button className="primary" onClick={() => setCreating(true)}>
                   Buat tiket
                 </button>
@@ -543,11 +543,6 @@ export default function Workspace({
               {['reports', 'tickets'].includes(view) && can('export_reports') && (
                 <button className="outline" onClick={exportCSV}>
                   <Download size={16} /> Ekspor laporan
-                </button>
-              )}
-              {view === 'team' && can('manage_users') && (
-                <button className="primary" onClick={() => setMemberEdit(null)}>
-                  <Plus size={17} /> Tambah anggota
                 </button>
               )}
             </div>
@@ -643,6 +638,7 @@ export default function Workspace({
             {view === 'team' && (
               <TeamView
                 team={team}
+                accessRequests={accessRequests}
                 roles={roles}
                 tickets={tickets}
                 categories={categories}
@@ -651,6 +647,28 @@ export default function Workspace({
                 canManageUsers={can('manage_users')}
                 canManageRoles={can('manage_roles')}
                 onEditMember={setMemberEdit}
+                onReviewAccess={async (request, decision, roleId) => {
+                  const response = await fetch(
+                    `/api/team/access-requests/${encodeURIComponent(request.userId)}`,
+                    {
+                      method: 'PATCH',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ decision, roleId }),
+                    }
+                  );
+                  const data = await response.json();
+                  if (!response.ok) {
+                    const message = data.error ?? 'Permintaan akses gagal diperbarui.';
+                    setToast(message);
+                    throw new Error(message);
+                  }
+                  await reload();
+                  setToast(
+                    decision === 'approve'
+                      ? `${request.name} disetujui sebagai anggota tim.`
+                      : `Permintaan ${request.name} ditolak.`
+                  );
+                }}
                 labels={labels}
               />
             )}

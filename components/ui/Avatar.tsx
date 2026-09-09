@@ -1,5 +1,5 @@
 'use client';
-import { initials } from '@/lib/demo';
+import { initials } from '@/lib/domain';
 
 interface AvatarProps {
   name: string;

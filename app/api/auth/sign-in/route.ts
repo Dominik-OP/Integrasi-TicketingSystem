@@ -1,65 +1,73 @@
+import { configuredTeamDomain, isAllowedTeamEmail, normalizeEmail } from '@/lib/auth/access';
 import { adminClient } from '@/lib/insforge/server';
 import { createAuthActions } from '@insforge/sdk/ssr';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
-  const email = String(body.email ?? '')
-    .trim()
-    .toLowerCase();
-  const password = String(body.password ?? '');
-  if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 6) {
-    return NextResponse.json(
-      { error: 'Masukkan email valid dan password minimal 6 karakter.' },
-      { status: 400 }
-    );
+  const email = normalizeEmail(String(body.email ?? ''));
+  const otp = String(body.otp ?? '').trim();
+
+  let domain: string;
+  try {
+    domain = configuredTeamDomain();
+  } catch {
+    return NextResponse.json({ error: 'Konfigurasi domain tim belum tersedia.' }, { status: 500 });
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email) || !isAllowedTeamEmail(email, domain)) {
+    return NextResponse.json({ error: 'Gunakan email kantor yang terdaftar.' }, { status: 400 });
   }
 
-  const cookieResponse = NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
   const auth = createAuthActions({
     baseUrl: process.env.NEXT_PUBLIC_INSFORGE_URL!,
     anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!,
-    requestCookies: await cookies(),
-    responseCookies: cookieResponse.cookies,
+    requestCookies: request.cookies,
+    responseCookies: response.cookies,
   });
 
-  const signInResult = await auth.signInWithPassword({ email, password });
-  let authUser = signInResult.data?.user;
-  if (signInResult.error || !authUser) {
-    const { count, error: countError } = await adminClient()
-      .database.from('team_members')
-      .select('user_id', { count: 'exact', head: true });
-    if (countError || count !== 0) {
-      return NextResponse.json({ error: 'Email atau password tidak cocok.' }, { status: 401 });
-    }
-
-    const signUpResult = await auth.signUp({
-      email,
-      password,
-      name: email.split('@')[0] || 'Admin',
-    });
-    if (signUpResult.error || !signUpResult.data?.user) {
+  if (!otp) {
+    const { error } = await auth.signInWithOtp({ email });
+    if (error) {
       return NextResponse.json(
-        { error: signUpResult.error?.message ?? 'Akun Admin pertama tidak dapat dibuat.' },
-        { status: 400 }
+        { error: 'Kode masuk tidak dapat dikirim. Coba lagi setelah 60 detik.' },
+        { status: error.statusCode ?? 400 }
       );
     }
-    authUser = signUpResult.data.user;
+    return NextResponse.json({ ok: true, accessStatus: 'code_sent' });
   }
 
-  const { error: memberError } = await adminClient().database.rpc('bootstrap_first_admin', {
-    p_user_id: authUser.id,
-    p_email: authUser.email,
-    p_display_name: authUser.profile?.name ?? email.split('@')[0] ?? 'Admin',
+  if (!/^\d{6}$/.test(otp)) {
+    return NextResponse.json({ error: 'Masukkan kode 6 digit.' }, { status: 400 });
+  }
+  const { data, error } = await auth.verifyOtp({
+    email,
+    otp,
+    name: email.split('@')[0] || 'Anggota',
   });
-  if (memberError) {
-    await auth.signOut();
+  if (error || !data?.user?.email) {
     return NextResponse.json(
-      { error: 'Email ini belum terdaftar sebagai anggota tim. Hubungi administrator.' },
-      { status: 403, headers: cookieResponse.headers }
+      { error: 'Kode salah atau kedaluwarsa.' },
+      { status: error?.statusCode ?? 401, headers: response.headers }
     );
   }
 
-  return cookieResponse;
+  const { data: accessStatus, error: accessError } = await adminClient().database.rpc(
+    'register_team_access_request',
+    {
+      p_user_id: data.user.id,
+      p_email: data.user.email,
+      p_display_name: data.user.profile?.name ?? email.split('@')[0],
+      p_allowed_domain: domain,
+    }
+  );
+  if (accessError) {
+    await auth.signOut();
+    return NextResponse.json(
+      { error: 'Permintaan akses tidak dapat dibuat.' },
+      { status: 403, headers: response.headers }
+    );
+  }
+
+  return NextResponse.json({ ok: true, accessStatus }, { headers: response.headers });
 }

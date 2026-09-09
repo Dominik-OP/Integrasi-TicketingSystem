@@ -1,5 +1,5 @@
 'use client';
-import type { Category, Member, Ticket } from '@/lib/demo';
+import type { Category, Member, Ticket } from '@/lib/domain';
 import { baseRole, type RoleDefinition } from '@/lib/permissions';
 import type { Project } from '@/lib/projects';
 import { reportMetrics } from '@/lib/report-metrics';

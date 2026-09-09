@@ -4,8 +4,10 @@ Aplikasi ticketing internal dan portal laporan publik berbasis Next.js dengan ba
 
 ## Status implementasi
 
-- Login workspace menggunakan email dan password melalui InsForge Auth; tidak ada lagi pemilih akun demo.
-- Pada database fresh, email dan password pertama otomatis membuat akun Admin.
+- Login workspace menggunakan kode OTP yang dikirim ke email melalui InsForge Auth.
+- Hanya email berdomain tepat `adiraja-integrasi.com` yang dapat meminta akses.
+- Pada database fresh, email kantor pertama otomatis menjadi Admin.
+- Akun berikutnya menunggu persetujuan Admin dan pemilihan role.
 - Portal publik membuat tiket nyata tanpa kategori awal dan menyediakan link tracking berbasis token hash.
 - Workspace membaca project, kategori, role, anggota, tiket, komentar, dan histori dari InsForge.
 - Assignment, perubahan prioritas/status, resolution, closure, dan komentar disimpan melalui RPC transaksional.
@@ -30,9 +32,7 @@ Copy-Item .env.example .env.local
 pnpm dev
 ```
 
-Isi `.env.local` dengan URL, anon key, dan API key project InsForge, lalu buka [http://localhost:3000](http://localhost:3000). Pilih **Masuk tim**, lalu masukkan email dan password.
-
-> Pada instalasi fresh, kredensial pertama otomatis dibuat sebagai akun Admin. Setelah anggota pertama tersedia, email lain hanya dapat masuk jika sudah didaftarkan sebagai anggota tim.
+Isi `.env.local` dengan URL, anon key, API key project InsForge, dan `TEAM_EMAIL_DOMAIN`. Buka [http://localhost:3000](http://localhost:3000), pilih **Masuk tim**, lalu masukkan email kantor dan kode 6 digit yang dikirim.
 
 ## Menyiapkan backend InsForge
 
@@ -65,7 +65,7 @@ API key InsForge adalah credential admin penuh. Jangan menaruhnya pada source co
 - `/submit/[project]`: form publik berdasarkan slug project seperti `/submit/app` atau `/submit/web`.
 - `/track/[token]`: halaman tracking publik menggunakan token.
 - `/reports`: KPI, tren, performa tim, dan ekspor CSV.
-- `/team`: anggota, role custom, status aktif, dan permission override.
+- `/team`: anggota, role custom, status aktif, permission override, dan persetujuan akses email.
 - `/settings/categories`: kategori dan target SLA.
 - `/settings/roles`: role, base access level, dan permission matrix.
 - `/settings/projects`: project, prefix tiket, dan link laporan publik.

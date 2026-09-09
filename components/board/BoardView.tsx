@@ -1,7 +1,7 @@
 'use client';
 import { Column, TicketCard } from '@/components/ui';
 import TicketFilters, { type TicketFiltersProps } from '@/components/ui/TicketFilters';
-import { statuses, type Category, type Member, type Status, type Ticket } from '@/lib/demo';
+import { statuses, type Category, type Member, type Status, type Ticket } from '@/lib/domain';
 import { canUpdateTicket, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
 import {

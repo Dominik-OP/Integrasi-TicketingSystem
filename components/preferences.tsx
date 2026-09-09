@@ -1,5 +1,5 @@
 'use client';
-import type { Role } from '@/lib/demo';
+import type { Role } from '@/lib/domain';
 import { Moon, Sun } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
