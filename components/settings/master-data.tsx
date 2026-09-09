@@ -3,7 +3,7 @@ import Select from '@/components/ui/Select';
 import type { Member, Role, Ticket } from '@/lib/domain';
 import { defaults, permissionList, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { dayKey, nextTicketNumber, projectSlug, type Project } from '@/lib/projects';
-import { ArrowRight, Check, Layers3, Plus, ShieldCheck, X } from 'lucide-react';
+import { ArrowRight, Check, Layers3, LoaderCircle, Plus, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessLabels } from '../preferences';
 import AccessLevelNames from './access-level-names';
@@ -211,7 +211,12 @@ export function ProjectSettings({
               riwayat dan filter.
             </p>
             <button className="primary" disabled={saving}>
-              <Check size={16} /> {saving ? 'Menyimpan…' : 'Simpan project'}
+              {saving ? (
+                <LoaderCircle className="loading-spinner" size={16} />
+              ) : (
+                <Check size={16} />
+              )}{' '}
+              {saving ? 'Menyimpan…' : 'Simpan project'}
             </button>
           </form>
         </section>
@@ -415,7 +420,12 @@ export function RoleSettings({
               ))}
             </div>
             <button className="primary" disabled={saving}>
-              <Check size={16} /> {saving ? 'Menyimpan…' : 'Simpan role'}
+              {saving ? (
+                <LoaderCircle className="loading-spinner" size={16} />
+              ) : (
+                <Check size={16} />
+              )}{' '}
+              {saving ? 'Menyimpan…' : 'Simpan role'}
             </button>
           </form>
         </section>

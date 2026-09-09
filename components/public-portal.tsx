@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   CircleCheck,
   Link2,
+  LoaderCircle,
   LockKeyhole,
   Mail,
   Search,
@@ -48,6 +49,7 @@ export default function PublicPortal({
     [loginEmail, setLoginEmail] = useState(''),
     [codeSent, setCodeSent] = useState(false),
     [authBusy, setAuthBusy] = useState(false),
+    [trackingBusy, setTrackingBusy] = useState(false),
     [resendCooldown, setResendCooldown] = useState(0);
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -63,20 +65,28 @@ export default function PublicPortal({
   }, [view, token]);
   useEffect(() => {
     if (!token || view !== 'track') return;
+    const controller = new AbortController();
     setError('');
+    setTrackingBusy(true);
     void fetch('/api/public/tracking', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ token }),
+      signal: controller.signal,
     })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         setTracked(data.ticket);
       })
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : 'Link tidak tersedia.')
-      );
+      .catch((reason) => {
+        if (!controller.signal.aborted)
+          setError(reason instanceof Error ? reason.message : 'Link tidak tersedia.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTrackingBusy(false);
+      });
+    return () => controller.abort();
   }, [token, view]);
   const ticket = tracked;
   const resolution = ticket?.resolution;
@@ -189,6 +199,7 @@ export default function PublicPortal({
             ) : (
               <form
                 className="form-stack"
+                aria-busy={authBusy}
                 onSubmit={async (event) => {
                   event.preventDefault();
                   const formData = new FormData(event.currentTarget);
@@ -253,8 +264,12 @@ export default function PublicPortal({
                   </p>
                 )}
                 <button className="primary" disabled={authBusy}>
-                  {authBusy ? 'Memproses…' : codeSent ? 'Verifikasi kode' : 'Kirim kode masuk'}{' '}
-                  <ArrowRight size={16} />
+                  {authBusy ? (
+                    <LoaderCircle className="loading-spinner" size={16} />
+                  ) : (
+                    <ArrowRight size={16} />
+                  )}{' '}
+                  {authBusy ? 'Memproses…' : codeSent ? 'Verifikasi kode' : 'Kirim kode masuk'}
                 </button>
                 {codeSent && (
                   <div className="form-row">
@@ -293,20 +308,33 @@ export default function PublicPortal({
               {!token && (
                 <form
                   className="form-stack"
+                  aria-busy={trackingBusy}
                   onSubmit={async (e) => {
                     e.preventDefault();
+                    if (trackingBusy) return;
                     const fd = new FormData(e.currentTarget);
                     setError('');
-                    const response = await fetch('/api/public/tracking', {
-                      method: 'POST',
-                      headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ number: fd.get('number'), email: fd.get('email') }),
-                    });
-                    const data = await response.json();
-                    setTracked(response.ok ? data.ticket : null);
-                    setError(
-                      response.ok ? '' : (data.error ?? 'Nomor tiket dan email tidak cocok.')
-                    );
+                    setTrackingBusy(true);
+                    try {
+                      const response = await fetch('/api/public/tracking', {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ number: fd.get('number'), email: fd.get('email') }),
+                      });
+                      const data = await response.json().catch(() => ({}));
+                      if (!response.ok)
+                        throw new Error(data.error ?? 'Nomor tiket dan email tidak cocok.');
+                      setTracked(data.ticket);
+                    } catch (reason) {
+                      setTracked(null);
+                      setError(
+                        reason instanceof Error
+                          ? reason.message
+                          : 'Nomor tiket dan email tidak cocok.'
+                      );
+                    } finally {
+                      setTrackingBusy(false);
+                    }
                   }}
                 >
                   <label>
@@ -322,14 +350,23 @@ export default function PublicPortal({
                       {error}
                     </p>
                   )}
-                  <button className="primary">
-                    <Search size={16} /> Lacak tiket
+                  <button className="primary" disabled={trackingBusy}>
+                    {trackingBusy ? (
+                      <LoaderCircle className="loading-spinner" size={16} />
+                    ) : (
+                      <Search size={16} />
+                    )}{' '}
+                    {trackingBusy ? 'Mencari tiket…' : 'Lacak tiket'}
                   </button>
                 </form>
               )}
               {token && !ticket && (
                 <div className="success">
-                  <Link2 size={35} />
+                  {trackingBusy ? (
+                    <LoaderCircle className="loading-spinner" size={35} />
+                  ) : (
+                    <Link2 size={35} />
+                  )}
                   <h2>{error || 'Memuat laporan…'}</h2>
                   <button className="outline" onClick={() => navigate('track')}>
                     <ArrowLeft size={15} /> Gunakan tracking manual

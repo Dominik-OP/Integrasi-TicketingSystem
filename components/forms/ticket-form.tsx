@@ -2,7 +2,7 @@
 import Select from '@/components/ui/Select';
 import type { Category } from '@/lib/domain';
 import type { Project } from '@/lib/projects';
-import { Layers3, Paperclip, Send } from 'lucide-react';
+import { Layers3, LoaderCircle, Paperclip, Send } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 export const impacts = [
@@ -16,12 +16,14 @@ export default function TicketForm({
   projectId,
   onSubmit,
   publicForm = false,
+  submitting = false,
 }: {
   categories: Category[];
   projects: Project[];
   projectId: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   publicForm?: boolean;
+  submitting?: boolean;
 }) {
   const activeCategories = categories.filter((c) => c.active !== false);
   const [chosen, setChosen] = useState(activeCategories[0]?.name ?? '');
@@ -35,7 +37,7 @@ export default function TicketForm({
     ? !!fixedProject
     : activeCategories.length > 0 && activeProjects.length > 0;
   return (
-    <form onSubmit={onSubmit} className="form-stack ticket-form-v2">
+    <form onSubmit={onSubmit} className="form-stack ticket-form-v2" aria-busy={submitting}>
       <input type="hidden" name="submissionMode" value={publicForm ? 'public' : 'team'} />
       {publicForm && fixedProject && (
         <div className="public-project-heading">
@@ -190,8 +192,16 @@ export default function TicketForm({
           mendapatkan link yang benar.
         </p>
       )}
-      <button className="primary" type="submit" disabled={!available}>
-        <Send size={16} /> Kirim laporan
+      <button className="primary" type="submit" disabled={!available || submitting}>
+        {submitting ? (
+          <>
+            <LoaderCircle className="loading-spinner" size={16} /> Mengirim laporan…
+          </>
+        ) : (
+          <>
+            <Send size={16} /> Kirim laporan
+          </>
+        )}
       </button>
     </form>
   );

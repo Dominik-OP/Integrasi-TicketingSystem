@@ -4,7 +4,7 @@ import Select from '@/components/ui/Select';
 import { type Category, type Member, type TeamAccessRequest, type Ticket } from '@/lib/domain';
 import { baseRole, roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
-import { Check, Clock3, Users, X } from 'lucide-react';
+import { Check, Clock3, LoaderCircle, Users, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface TeamViewProps {
@@ -110,7 +110,12 @@ export default function TeamView({
                         }
                       }}
                     >
-                      <X size={15} /> Tolak
+                      {busy ? (
+                        <LoaderCircle className="loading-spinner" size={15} />
+                      ) : (
+                        <X size={15} />
+                      )}{' '}
+                      {busy ? 'Memproses…' : 'Tolak'}
                     </button>
                     <button
                       className="primary"
@@ -124,7 +129,12 @@ export default function TeamView({
                         }
                       }}
                     >
-                      <Check size={15} /> Setujui
+                      {busy ? (
+                        <LoaderCircle className="loading-spinner" size={15} />
+                      ) : (
+                        <Check size={15} />
+                      )}{' '}
+                      {busy ? 'Memproses…' : 'Setujui'}
                     </button>
                   </div>
                 </section>

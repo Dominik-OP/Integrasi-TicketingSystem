@@ -38,6 +38,7 @@ import {
   ExternalLink,
   Layers3,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
   Menu,
   Paperclip,
@@ -108,6 +109,7 @@ export default function Workspace({
   const [token, setToken] = useState(initialToken);
   const [toast, setToast] = useState('');
   const [creating, setCreating] = useState(false);
+  const [ticketSubmitting, setTicketSubmitting] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [memberSaving, setMemberSaving] = useState(false);
@@ -251,8 +253,10 @@ export default function Workspace({
       projects={projects}
       projectId={view === 'submit' ? publicProjectId : projectId}
       publicForm={view === 'submit'}
+      submitting={ticketSubmitting}
       onSubmit={async (e) => {
         e.preventDefault();
+        if (ticketSubmitting) return;
         const fd = new FormData(e.currentTarget);
         const files = fd
           .getAll('attachments')
@@ -283,25 +287,29 @@ export default function Workspace({
           return;
         }
         fd.set('project', project.id);
-        const response = await fetch('/api/public/tickets', {
-          method: 'POST',
-          headers: { 'idempotency-key': crypto.randomUUID() },
-          body: fd,
-        });
-        const result = await response.json();
-        if (!response.ok) {
-          setToast(result.error ?? 'Laporan gagal disimpan.');
-          return;
-        }
-        const newTicket: Ticket = result.ticket;
-        if (result.attachmentWarning) setToast(result.attachmentWarning);
-        if (view === 'submit') setSubmitted(newTicket);
-        else {
-          setCreating(false);
-          setProjectId(project.id);
-          setSelected(newTicket.id);
-          await reload();
-          setToast('Tiket berhasil dibuat.');
+        setTicketSubmitting(true);
+        try {
+          const response = await fetch('/api/public/tickets', {
+            method: 'POST',
+            headers: { 'idempotency-key': crypto.randomUUID() },
+            body: fd,
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error ?? 'Laporan gagal disimpan.');
+          const newTicket: Ticket = result.ticket;
+          if (result.attachmentWarning) setToast(result.attachmentWarning);
+          if (view === 'submit') setSubmitted(newTicket);
+          else {
+            setCreating(false);
+            setProjectId(project.id);
+            setSelected(newTicket.id);
+            await reload();
+            setToast('Tiket berhasil dibuat.');
+          }
+        } catch (error) {
+          setToast(error instanceof Error ? error.message : 'Laporan gagal disimpan.');
+        } finally {
+          setTicketSubmitting(false);
         }
       }}
     />
@@ -371,7 +379,7 @@ export default function Workspace({
   if (!ready || authLoading)
     return (
       <div role="status" className="empty">
-        Memuat workspace…
+        <LoaderCircle className="loading-spinner" size={24} /> Memuat workspace…
       </div>
     );
 
@@ -819,7 +827,12 @@ export default function Workspace({
               Anggota aktif
             </label>
             <button className="primary" type="submit" disabled={memberSaving}>
-              <Check size={16} /> {memberSaving ? 'Menyimpan…' : 'Simpan anggota'}
+              {memberSaving ? (
+                <LoaderCircle className="loading-spinner" size={16} />
+              ) : (
+                <Check size={16} />
+              )}{' '}
+              {memberSaving ? 'Menyimpan…' : 'Simpan anggota'}
             </button>
           </form>
         </Dialog>
@@ -917,7 +930,12 @@ export default function Workspace({
               Kategori aktif pada form laporan
             </label>
             <button className="primary" type="submit" disabled={categorySaving}>
-              <Check size={16} /> {categorySaving ? 'Menyimpan…' : 'Simpan aturan'}
+              {categorySaving ? (
+                <LoaderCircle className="loading-spinner" size={16} />
+              ) : (
+                <Check size={16} />
+              )}{' '}
+              {categorySaving ? 'Menyimpan…' : 'Simpan aturan'}
             </button>
           </form>
         </Dialog>
