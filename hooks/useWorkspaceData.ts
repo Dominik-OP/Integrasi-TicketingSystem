@@ -46,6 +46,63 @@ export function useWorkspaceData(notify: (message: string) => void) {
     void reload();
   }, [reload]);
 
+  const saveProject = useCallback(
+    async (project: Project) => {
+      const response = await fetch('/api/projects', {
+        method: project.databaseId ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(project),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Project gagal disimpan.');
+      await reload();
+    },
+    [reload]
+  );
+
+  const saveMember = useCallback(
+    async (member: Member) => {
+      const response = await fetch(`/api/team/members/${encodeURIComponent(member.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(member),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Anggota gagal disimpan.');
+      await reload();
+    },
+    [reload]
+  );
+
+  const saveCategory = useCallback(
+    async (category: Category) => {
+      const response = await fetch('/api/categories', {
+        method: category.id ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(category),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Kategori gagal disimpan.');
+      await reload();
+    },
+    [reload]
+  );
+
+  const saveRole = useCallback(
+    async (role: RoleDefinition) => {
+      const exists = roles.some((item) => item.id === role.id);
+      const response = await fetch('/api/roles', {
+        method: exists ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(role),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Role gagal disimpan.');
+      await reload();
+    },
+    [reload, roles]
+  );
+
   return {
     team,
     setTeam,
@@ -60,5 +117,9 @@ export function useWorkspaceData(notify: (message: string) => void) {
     setTickets,
     ready,
     reload,
+    saveProject,
+    saveMember,
+    saveCategory,
+    saveRole,
   };
 }

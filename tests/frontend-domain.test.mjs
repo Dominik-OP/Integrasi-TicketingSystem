@@ -8,7 +8,7 @@ import {
   canUpdateTicket,
   roleLabel,
 } from '../lib/permissions.ts';
-import { nextTicketNumber, dayKey } from '../lib/projects.ts';
+import { nextTicketNumber, dayKey, projectSlug } from '../lib/projects.ts';
 
 const projects = [
   { id: 'app', name: 'App Test', prefix: 'APP', description: '', active: true },
@@ -84,4 +84,10 @@ test('Changing prefix preserves sequence for existing project tickets', () => {
     ),
     'NEW-20260907-0002'
   );
+});
+
+test('Project public links use a stable slug derived from the project name', () => {
+  assert.equal(projectSlug('Portal Pelanggan'), 'portal-pelanggan');
+  assert.equal(projectSlug('  Operasi & Integrasi  '), 'operasi-integrasi');
+  assert.equal(projectSlug('Layanan Áplikasi'), 'layanan-aplikasi');
 });

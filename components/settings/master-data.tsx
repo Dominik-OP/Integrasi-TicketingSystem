@@ -2,7 +2,7 @@
 import Select from '@/components/ui/Select';
 import type { Member, Role, Ticket } from '@/lib/domain';
 import { defaults, permissionList, type Permission, type RoleDefinition } from '@/lib/permissions';
-import { dayKey, nextTicketNumber, type Project } from '@/lib/projects';
+import { dayKey, nextTicketNumber, projectSlug, type Project } from '@/lib/projects';
 import { ArrowRight, Check, Layers3, Plus, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAccessLabels } from '../preferences';
@@ -16,11 +16,12 @@ export function ProjectSettings({
 }: {
   projects: Project[];
   tickets: Ticket[];
-  onSave: (projects: Project[]) => void;
+  onSave: (project: Project) => Promise<void>;
   notify: (text: string) => void;
 }) {
   const [draft, setDraft] = useState<Project | null>(null);
-  function save() {
+  const [saving, setSaving] = useState(false);
+  async function save() {
     if (!draft) return;
     const name = draft.name.trim(),
       prefix = draft.prefix.trim().toUpperCase();
@@ -37,14 +38,22 @@ export function ProjectSettings({
       notify('Nama project atau prefix sudah digunakan.');
       return;
     }
-    const data = { ...draft, name, prefix };
-    onSave(
-      projects.some((p) => p.id === data.id)
-        ? projects.map((p) => (p.id === data.id ? data : p))
-        : [...projects, data]
-    );
-    setDraft(null);
-    notify('Project berhasil disimpan. Nomor tiket lama tetap sama.');
+    const slug = draft.databaseId ? draft.id : projectSlug(name);
+    if (!slug) {
+      notify('Nama project harus memuat minimal satu huruf atau angka untuk link.');
+      return;
+    }
+    const data = { ...draft, id: slug, name, prefix };
+    setSaving(true);
+    try {
+      await onSave(data);
+      setDraft(null);
+      notify('Project berhasil disimpan ke backend.');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Project gagal disimpan.');
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <>
@@ -57,7 +66,7 @@ export function ProjectSettings({
           className="primary"
           onClick={() =>
             setDraft({
-              id: crypto.randomUUID(),
+              id: '',
               name: '',
               prefix: '',
               description: '',
@@ -126,7 +135,7 @@ export function ProjectSettings({
       {draft && (
         <section className="panel editor-panel">
           <header>
-            <h2>{projects.some((p) => p.id === draft.id) ? 'Edit project' : 'Project baru'}</h2>
+            <h2>{draft.databaseId ? 'Edit project' : 'Project baru'}</h2>
             <button aria-label="Tutup editor project" onClick={() => setDraft(null)}>
               <X size={18} />
             </button>
@@ -147,7 +156,12 @@ export function ProjectSettings({
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   maxLength={80}
+                  placeholder="Contoh: Portal Pelanggan"
                 />
+                <small>
+                  Saat project dibuat, nama ini menjadi dasar link laporan publik. Link tetap stabil
+                  setelah project disimpan.
+                </small>
               </label>
               <label>
                 Prefix tiket
@@ -159,6 +173,7 @@ export function ProjectSettings({
                   onChange={(e) => setDraft({ ...draft, prefix: e.target.value.toUpperCase() })}
                   placeholder="APP"
                 />
+                <small>Gunakan 2–8 huruf untuk nomor tiket, contoh APP-20260909-0001.</small>
               </label>
             </div>
             <label>
@@ -167,7 +182,9 @@ export function ProjectSettings({
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 maxLength={180}
+                placeholder="Jelaskan jenis laporan yang ditangani project ini"
               />
+              <small>Keterangan ini membantu pelapor memilih project yang tepat.</small>
             </label>
             <label className="check-label">
               <input
@@ -183,12 +200,18 @@ export function ProjectSettings({
                 {draft.prefix || 'PREFIX'}-{dayKey()}-0001
               </code>
             </div>
+            <div className="prefix-preview">
+              <span>Link laporan publik</span>
+              <code>
+                /submit/{draft.databaseId ? draft.id : projectSlug(draft.name) || 'nama-project'}
+              </code>
+            </div>
             <p className="muted small-text">
               Perubahan prefix hanya berlaku untuk tiket baru. Project nonaktif tetap tersedia pada
               riwayat dan filter.
             </p>
-            <button className="primary">
-              <Check size={16} /> Simpan project
+            <button className="primary" disabled={saving}>
+              <Check size={16} /> {saving ? 'Menyimpan…' : 'Simpan project'}
             </button>
           </form>
         </section>
@@ -207,10 +230,11 @@ export function RoleSettings({
   roles: RoleDefinition[];
   team: Member[];
   currentUser: Member;
-  onSave: (roles: RoleDefinition[]) => void;
+  onSave: (role: RoleDefinition) => Promise<void>;
   notify: (text: string) => void;
 }) {
   const [draft, setDraft] = useState<RoleDefinition | null>(null);
+  const [saving, setSaving] = useState(false);
   const { labels } = useAccessLabels();
   return (
     <>
@@ -224,7 +248,7 @@ export function RoleSettings({
           className="primary"
           onClick={() =>
             setDraft({
-              id: crypto.randomUUID(),
+              id: '',
               name: '',
               base: 'Agent',
               permissions: defaults('Agent'),
@@ -304,7 +328,7 @@ export function RoleSettings({
           </header>
           <form
             className="form-stack"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const name = draft.name.trim();
               if (!name) return;
@@ -325,13 +349,16 @@ export function RoleSettings({
                 );
                 return;
               }
-              onSave(
-                roles.some((r) => r.id === draft.id)
-                  ? roles.map((r) => (r.id === draft.id ? { ...draft, name } : r))
-                  : [...roles, { ...draft, name }]
-              );
-              setDraft(null);
-              notify('Role dan permission matrix berhasil disimpan.');
+              setSaving(true);
+              try {
+                await onSave({ ...draft, name });
+                setDraft(null);
+                notify('Role dan permission matrix berhasil disimpan ke backend.');
+              } catch (error) {
+                notify(error instanceof Error ? error.message : 'Role gagal disimpan.');
+              } finally {
+                setSaving(false);
+              }
             }}
           >
             <div className="form-row">
@@ -387,8 +414,8 @@ export function RoleSettings({
                 </label>
               ))}
             </div>
-            <button className="primary">
-              <Check size={16} /> Simpan role
+            <button className="primary" disabled={saving}>
+              <Check size={16} /> {saving ? 'Menyimpan…' : 'Simpan role'}
             </button>
           </form>
         </section>

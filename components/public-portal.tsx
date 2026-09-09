@@ -40,13 +40,23 @@ export default function PublicPortal({
   clearSubmitted,
   form,
   token,
+  notify,
   ready,
 }: Props) {
   const [tracked, setTracked] = useState<Ticket | null>(null),
     [error, setError] = useState(''),
     [loginEmail, setLoginEmail] = useState(''),
     [codeSent, setCodeSent] = useState(false),
-    [authBusy, setAuthBusy] = useState(false);
+    [authBusy, setAuthBusy] = useState(false),
+    [resendCooldown, setResendCooldown] = useState(0);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(
+      () => setResendCooldown((seconds) => Math.max(0, seconds - 1)),
+      1000
+    );
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
   useEffect(() => {
     setTracked(null);
     setError('');
@@ -191,8 +201,10 @@ export default function PublicPortal({
                   try {
                     const status = await signIn(email, otp);
                     setLoginEmail(email);
-                    if (status === 'code_sent') setCodeSent(true);
-                    else if (status === 'active') window.location.assign('/');
+                    if (status === 'code_sent') {
+                      setCodeSent(true);
+                      setResendCooldown(60);
+                    } else if (status === 'active') window.location.assign('/');
                   } catch (reason) {
                     setError(reason instanceof Error ? reason.message : 'Proses masuk gagal.');
                   } finally {
@@ -245,9 +257,34 @@ export default function PublicPortal({
                   <ArrowRight size={16} />
                 </button>
                 {codeSent && (
-                  <button type="button" onClick={() => setCodeSent(false)} disabled={authBusy}>
-                    Ganti email
-                  </button>
+                  <div className="form-row">
+                    <button
+                      type="button"
+                      disabled={authBusy || resendCooldown > 0}
+                      onClick={async () => {
+                        setAuthBusy(true);
+                        setError('');
+                        try {
+                          await signIn(loginEmail);
+                          setResendCooldown(60);
+                          notify('Kode verifikasi baru sudah dikirim.');
+                        } catch (reason) {
+                          setError(
+                            reason instanceof Error ? reason.message : 'Kode gagal dikirim ulang.'
+                          );
+                        } finally {
+                          setAuthBusy(false);
+                        }
+                      }}
+                    >
+                      {resendCooldown > 0
+                        ? `Kirim ulang kode (${resendCooldown} dtk)`
+                        : 'Kirim ulang kode verifikasi'}
+                    </button>
+                    <button type="button" onClick={() => setCodeSent(false)} disabled={authBusy}>
+                      Ganti email
+                    </button>
+                  </div>
                 )}
               </form>
             )

@@ -15,8 +15,8 @@ interface SettingsViewProps {
   team: Member[];
   categories: Category[];
   user: Member;
-  onSaveProjects: (p: Project[]) => void;
-  onSaveRoles: (r: RoleDefinition[]) => void;
+  onSaveProject: (project: Project) => Promise<void>;
+  onSaveRole: (role: RoleDefinition) => Promise<void>;
   notify: (msg: string) => void;
   canManageCategories: boolean;
   canManageRoles: boolean;
@@ -33,8 +33,8 @@ export default function SettingsView({
   team,
   categories,
   user,
-  onSaveProjects,
-  onSaveRoles,
+  onSaveProject,
+  onSaveRole,
   notify,
   canManageCategories,
   canManageRoles,
@@ -79,7 +79,7 @@ export default function SettingsView({
         <ProjectSettings
           projects={projects}
           tickets={tickets}
-          onSave={onSaveProjects}
+          onSave={onSaveProject}
           notify={notify}
         />
       )}
@@ -89,7 +89,7 @@ export default function SettingsView({
           roles={roles}
           team={team}
           currentUser={user}
-          onSave={onSaveRoles}
+          onSave={onSaveRole}
           notify={notify}
         />
       )}

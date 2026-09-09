@@ -110,20 +110,22 @@ export default function Workspace({
   const [creating, setCreating] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [memberSaving, setMemberSaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
   const {
     team,
-    setTeam,
     accessRequests,
     categories,
-    setCategories,
     projects,
-    setProjects,
     roles,
-    setRoles,
     tickets,
     setTickets,
     ready,
     reload,
+    saveProject,
+    saveMember,
+    saveCategory,
+    saveRole,
   } = useWorkspaceData(setToast);
 
   const {
@@ -236,6 +238,12 @@ export default function Workspace({
   const publicView = ['submit', 'track', 'login'].includes(view);
 
   const activeWorkspace = projects.find((p) => p.id === projectId);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   const ticketForm = () => (
     <TicketForm
@@ -683,8 +691,8 @@ export default function Workspace({
                 team={team}
                 categories={categories}
                 user={user}
-                onSaveProjects={setProjects}
-                onSaveRoles={setRoles}
+                onSaveProject={saveProject}
+                onSaveRole={saveRole}
                 notify={setToast}
                 canManageCategories={can('manage_categories')}
                 canManageRoles={can('manage_roles')}
@@ -736,8 +744,9 @@ export default function Workspace({
         >
           <form
             className="form-stack"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
+              if (memberSaving) return;
               const fd = new FormData(e.currentTarget);
               const data: Member = {
                 id: memberEdit?.id ?? crypto.randomUUID(),
@@ -760,11 +769,16 @@ export default function Workspace({
                   ? fd.get('active') === 'on'
                   : (memberEdit?.active ?? true),
               };
-              setTeam((all) =>
-                memberEdit ? all.map((m) => (m.id === data.id ? data : m)) : [...all, data]
-              );
-              setMemberEdit(undefined);
-              setToast('Anggota tim berhasil disimpan.');
+              setMemberSaving(true);
+              try {
+                await saveMember(data);
+                setMemberEdit(undefined);
+                setToast('Anggota tim berhasil disimpan ke backend.');
+              } catch (error) {
+                setToast(error instanceof Error ? error.message : 'Anggota gagal disimpan.');
+              } finally {
+                setMemberSaving(false);
+              }
             }}
           >
             <label>
@@ -778,13 +792,10 @@ export default function Workspace({
             </label>
             <label>
               Email
-              <input
-                name="email"
-                type="email"
-                required
-                readOnly={!can('manage_users')}
-                defaultValue={memberEdit?.email}
-              />
+              <input name="email" type="email" required readOnly defaultValue={memberEdit?.email} />
+              <small>
+                Email login mengikuti akun terverifikasi dan tidak diubah dari halaman ini.
+              </small>
             </label>
             {can('manage_roles') ? (
               <PermissionOverrides
@@ -807,8 +818,8 @@ export default function Workspace({
               />{' '}
               Anggota aktif
             </label>
-            <button className="primary" type="submit">
-              <Check size={16} /> Simpan anggota
+            <button className="primary" type="submit" disabled={memberSaving}>
+              <Check size={16} /> {memberSaving ? 'Menyimpan…' : 'Simpan anggota'}
             </button>
           </form>
         </Dialog>
@@ -821,8 +832,9 @@ export default function Workspace({
         >
           <form
             className="form-stack"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
+              if (categorySaving) return;
               const fd = new FormData(e.currentTarget);
               const data: Category = {
                 name: String(fd.get('name')).trim(),
@@ -845,19 +857,19 @@ export default function Workspace({
                 setToast('Target penyelesaian harus sama atau lebih besar dari target respons.');
                 return;
               }
-              setCategories(
-                categoryEdit
-                  ? categories.map((c) => (c.name === categoryEdit.name ? data : c))
-                  : [...categories, data]
-              );
-              if (categoryEdit)
-                setTickets((all) =>
-                  all.map((t) =>
-                    t.category === categoryEdit.name ? { ...t, category: data.name } : t
-                  )
-                );
-              setCategoryEdit(undefined);
-              setToast('Kategori dan aturan SLA disimpan.');
+              setCategorySaving(true);
+              try {
+                await saveCategory({
+                  ...data,
+                  ...(categoryEdit?.id ? { id: categoryEdit.id } : {}),
+                });
+                setCategoryEdit(undefined);
+                setToast('Kategori dan aturan SLA disimpan ke backend.');
+              } catch (error) {
+                setToast(error instanceof Error ? error.message : 'Kategori gagal disimpan.');
+              } finally {
+                setCategorySaving(false);
+              }
             }}
           >
             <label>
@@ -904,8 +916,8 @@ export default function Workspace({
               />{' '}
               Kategori aktif pada form laporan
             </label>
-            <button className="primary" type="submit">
-              <Check size={16} /> Simpan aturan
+            <button className="primary" type="submit" disabled={categorySaving}>
+              <Check size={16} /> {categorySaving ? 'Menyimpan…' : 'Simpan aturan'}
             </button>
           </form>
         </Dialog>

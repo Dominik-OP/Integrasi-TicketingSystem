@@ -11,6 +11,9 @@
 * {
   box-sizing: border-box;
 }
+html {
+  scrollbar-gutter: stable;
+}
 body {
   margin: 0;
   color: var(--ink);
@@ -937,11 +940,11 @@ tbody tr:hover {
 .overlay {
   position: fixed;
   inset: 0;
-  background: #152c255c;
+  background: #152c256b;
   z-index: 100;
   display: flex;
   justify-content: flex-end;
-  backdrop-filter: blur(3px);
+  animation: overlay-in 0.14s ease-out both;
 }
 .dialog {
   width: 610px;
@@ -950,8 +953,11 @@ tbody tr:hover {
   overflow-y: auto;
   background: #fff;
   padding: 25px 28px;
-  box-shadow: -15px 0 70px #183e2325;
-  animation: slide 0.18s ease-out;
+  box-shadow: -12px 0 36px #183e2320;
+  animation: slide 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  backface-visibility: hidden;
+  contain: layout paint;
+  will-change: transform, opacity;
 }
 .dialog > header {
   display: flex;
@@ -1196,6 +1202,27 @@ tbody tr:hover {
   box-shadow: 0 8px 40px #163c2940;
   font-size: 12px;
   max-width: 90vw;
+  animation: toast-lifetime 5s ease-in-out both;
+}
+@keyframes toast-lifetime {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  5%,
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
 }
 .toast > svg {
   flex-shrink: 0;
@@ -1584,13 +1611,21 @@ tbody tr:hover {
 .mobile-toggle {
   display: none;
 }
-@keyframes slide {
+@keyframes overlay-in {
   from {
-    transform: translateX(35px);
-    opacity: 0.6;
+    opacity: 0;
   }
   to {
-    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slide {
+  from {
+    transform: translate3d(28px, 0, 0);
+    opacity: 0.85;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
     opacity: 1;
   }
 }
