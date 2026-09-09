@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   const requestedPriority = String(input.priority ?? '')
     .trim()
     .toLowerCase();
+  const teamSubmission = String(input.submissionMode ?? '') === 'team';
   if (
     !projectSlug ||
     title.length < 5 ||
@@ -49,9 +50,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const member = await currentMember();
+  const member = teamSubmission ? await currentMember() : null;
+  if (teamSubmission && !member) {
+    return NextResponse.json({ error: 'Sesi anggota tim tidak valid.' }, { status: 401 });
+  }
   let categoryId: string | null = null;
-  if (member) {
+  if (teamSubmission) {
     if (!requestedCategory || !['low', 'medium', 'high', 'urgent'].includes(requestedPriority)) {
       return NextResponse.json({ error: 'Pilih kategori dan prioritas tiket.' }, { status: 400 });
     }
@@ -70,7 +74,7 @@ export async function POST(request: Request) {
   const trackingToken = randomBytes(32).toString('hex');
   const tokenHash = createHash('sha256').update(trackingToken).digest('hex');
   const admin = adminClient();
-  const rpcName = member ? 'create_team_ticket' : 'create_ticket';
+  const rpcName = teamSubmission ? 'create_team_ticket' : 'create_ticket';
   const rpcInput = {
     p_project_slug: projectSlug,
     p_category_id: categoryId,
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
     p_tracking_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     p_idempotency_key: request.headers.get('idempotency-key') || randomUUID(),
     p_created_by_user_id: member?.user.id ?? null,
-    ...(member ? { p_priority: requestedPriority } : {}),
+    ...(teamSubmission ? { p_priority: requestedPriority } : {}),
   };
   const { data, error } = await admin.database.rpc(rpcName, rpcInput);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

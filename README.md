@@ -95,4 +95,6 @@ Bucket dibuat dengan:
 npx -y @insforge/cli storage create-bucket ticket-attachments --private
 ```
 
-Pengelolaan master data dari layar pengaturan akan menjadi tahap integrasi berikutnya.
+Email memakai alur hybrid. InsForge Auth mengirim kode OTP login. Resend mengirim konfirmasi tiket, balasan publik, status resolved/closed, dan pemberitahuan tiket baru kepada Admin/Reviewer aktif. Worker `dispatch-ticket-email` memproses database outbox setiap menit; kegagalan email tidak membatalkan perubahan tiket.
+
+Secret worker disimpan melalui InsForge CLI, bukan `.env` frontend atau Git: `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `APP_URL`, `EMAIL_WORKER_TOKEN`, dan `TRACKING_TOKEN_SECRET`.

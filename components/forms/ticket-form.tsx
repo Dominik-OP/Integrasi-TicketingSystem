@@ -36,6 +36,7 @@ export default function TicketForm({
     : activeCategories.length > 0 && activeProjects.length > 0;
   return (
     <form onSubmit={onSubmit} className="form-stack ticket-form-v2">
+      <input type="hidden" name="submissionMode" value={publicForm ? 'public' : 'team'} />
       {publicForm && fixedProject && (
         <div className="public-project-heading">
           <span className="project-heading-mark">
