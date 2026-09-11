@@ -1,10 +1,8 @@
 import { PreferencesProvider } from '@/components/preferences';
 import type { Metadata } from 'next';
-import './globals.css';
-import './refinements.css';
-import './select.css';
-import './theme.css';
-import './ui-polish.css';
+// Imports every stylesheet in cascade-layer order; see the header of app/shadcn.css.
+import './shadcn.css';
+
 export const metadata: Metadata = {
   title: 'Integrasi - Ticketing System',
   description: 'Satu tempat untuk setiap solusi. Kelola tiket dan kolaborasi tim support.',
@@ -16,7 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('integrasi-theme');document.documentElement.dataset.theme=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}",
+              "try{var t=localStorage.getItem('integrasi-theme');if(['light','dark','sky'].indexOf(t)<0)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}",
           }}
         />
       </head>

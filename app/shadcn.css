@@ -1,0 +1,207 @@
+/* Single stylesheet entry. Remote font import must stay first. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
+
+/*
+ * Cascade order. The existing app CSS lives in `legacy`: above Tailwind's base (so nothing
+ * shadcn ships can restyle the current UI) but below utilities (so Tailwind classes on shadcn
+ * components still win over legacy element rules like `button {}` or `th {}`).
+ * Tailwind's global preflight is intentionally not imported; `ui-base` applies a scoped
+ * equivalent only inside `.ui-scope` and shadcn portals.
+ */
+@layer theme, base, legacy, ui-base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@import './globals.css' layer(legacy);
+@import './refinements.css' layer(legacy);
+@import './select.css' layer(legacy);
+@import './theme.css' layer(legacy);
+@import './ui-polish.css' layer(legacy);
+@import './appearance.css' layer(legacy);
+
+/* Only scan Tailwind-based code, so legacy class names like `outline` never become utilities. */
+@source '../components/shadcn';
+@source '../components/efferd';
+@source '../components/custom-sidebar-trigger.tsx';
+/* "outline" appears in shadcn variant names; as a utility it would restyle the legacy `.outline` button. */
+@source not inline('outline');
+
+@custom-variant dark (&:is([data-theme='dark'] *));
+
+@theme inline {
+  --font-heading: 'Manrope', var(--font);
+  --font-sans: var(--font);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * shadcn tokens, derived from the active app theme (see app/theme.css). They are scoped rather
+ * than set on :root because legacy CSS already uses --muted and --primary with other meanings.
+ */
+:where(.ui-scope, [data-radix-popper-content-wrapper], [data-slot='select-content']) {
+  --background: var(--page);
+  --foreground: var(--ink);
+  --card: var(--panel);
+  --card-foreground: var(--ink);
+  --popover: var(--panel);
+  --popover-foreground: var(--ink);
+  --primary: var(--green);
+  --primary-foreground: #fff;
+  --secondary: var(--soft);
+  --secondary-foreground: var(--ink);
+  --muted: var(--soft);
+  --muted-foreground: var(--theme-muted);
+  --accent: var(--hover);
+  --accent-foreground: var(--ink);
+  --destructive: #c4534c;
+  --border: var(--theme-border);
+  --input: var(--theme-border);
+  --ring: var(--theme-accent);
+  --chart-1: #26735d;
+  --chart-2: #5b9f86;
+  --chart-3: #c39463;
+  --chart-4: #7998b3;
+  --chart-5: #c77a70;
+  --radius: 0.625rem;
+  --sidebar: var(--soft);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--green);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: var(--hover);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--theme-border);
+  --sidebar-ring: var(--theme-accent);
+}
+:root[data-theme='dark']
+  :where(.ui-scope, [data-radix-popper-content-wrapper], [data-slot='select-content']) {
+  --destructive: #e6a38d;
+  --chart-1: #6fb592;
+  --chart-2: #97c8ac;
+  --chart-3: #d9bc8a;
+  --chart-4: #a3c3d1;
+  --chart-5: #eca297;
+}
+:root[data-theme='sky']
+  :where(.ui-scope, [data-radix-popper-content-wrapper], [data-slot='select-content']) {
+  --destructive: #c14e47;
+  --chart-1: #2f80d0;
+  --chart-2: #5aa2e3;
+  --chart-3: #e0a24f;
+  --chart-4: #3fa796;
+  --chart-5: #d9695f;
+}
+
+@layer ui-base {
+  :where(.ui-scope, [data-radix-popper-content-wrapper], [data-slot='select-content']) {
+    color: var(--foreground);
+    font-family: var(--font);
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+
+    /* Drop legacy element styles, then re-apply Tailwind's preflight within this scope. */
+    & :where(button, input, select, textarea, a, h1, h2, h3, h4, p, small, table, tr, th, td) {
+      all: revert;
+    }
+    & *,
+    & ::before,
+    & ::after,
+    & ::backdrop {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 0 solid var(--border);
+      outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+    }
+    & :where(h1, h2, h3, h4, h5, h6) {
+      font-size: inherit;
+      font-weight: inherit;
+    }
+    & :where(a) {
+      color: inherit;
+      text-decoration: inherit;
+    }
+    & :where(b, strong) {
+      font-weight: bolder;
+    }
+    & :where(small) {
+      font-size: 80%;
+    }
+    & :where(table) {
+      text-indent: 0;
+      border-color: inherit;
+      border-collapse: collapse;
+    }
+    & :where(ol, ul, menu) {
+      list-style: none;
+    }
+    & :where(img, svg, video, canvas) {
+      display: block;
+      vertical-align: middle;
+    }
+    & :where(img, video) {
+      max-width: 100%;
+      height: auto;
+    }
+    & :where(button, input, select, optgroup, textarea) {
+      font: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+      border-radius: 0;
+      background-color: transparent;
+      opacity: 1;
+    }
+    & :where(button:not(:disabled), [role='button']:not(:disabled)) {
+      cursor: pointer;
+    }
+    & ::placeholder {
+      opacity: 1;
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+    & :where(textarea) {
+      resize: vertical;
+    }
+    & :where([hidden]:not([hidden='until-found'])) {
+      display: none !important;
+    }
+  }
+}

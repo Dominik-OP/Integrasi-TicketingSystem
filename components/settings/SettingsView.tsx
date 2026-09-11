@@ -1,6 +1,6 @@
 'use client';
+import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import { ProjectSettings, RoleSettings } from '@/components/settings/master-data';
-import { Empty } from '@/components/ui';
 import { type Category, type Member, type Ticket } from '@/lib/domain';
 import { can, type Permission, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
@@ -24,6 +24,13 @@ interface SettingsViewProps {
   onEditCategory: (cat: Category | null) => void;
 }
 
+const settingsTabs: { id: string; label: string; permission?: Permission }[] = [
+  { id: 'categories', label: 'Kategori & SLA', permission: 'manage_categories' },
+  { id: 'roles', label: 'Role & hak akses', permission: 'manage_roles' },
+  { id: 'projects', label: 'Project & prefix', permission: 'manage_projects' },
+  { id: 'appearance', label: 'Tampilan' },
+];
+
 export default function SettingsView({
   settingsTab,
   navigateSettings,
@@ -41,41 +48,27 @@ export default function SettingsView({
   canManageProjects,
   onEditCategory,
 }: SettingsViewProps) {
-  const canSettings = canManageCategories || canManageRoles || canManageProjects;
-
-  if (!canSettings) {
-    return <Empty text="Anda tidak memiliki izin pengaturan." />;
-  }
+  // Appearance is personal, so every member has at least that tab.
+  const tabs = settingsTabs.filter((t) => !t.permission || can(user, roles, t.permission));
+  const activeTab = tabs.some((t) => t.id === settingsTab) ? settingsTab : 'appearance';
 
   return (
     <>
       <div className="settings-tabs">
-        {[
-          {
-            id: 'categories',
-            label: 'Kategori & SLA',
-            permission: 'manage_categories' as Permission,
-          },
-          { id: 'roles', label: 'Role & hak akses', permission: 'manage_roles' as Permission },
-          {
-            id: 'projects',
-            label: 'Project & prefix',
-            permission: 'manage_projects' as Permission,
-          },
-        ]
-          .filter((t) => can(user, roles, t.permission))
-          .map((t) => (
-            <button
-              key={t.id}
-              className={settingsTab === t.id ? 'selected' : ''}
-              onClick={() => navigateSettings(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            className={activeTab === t.id ? 'selected' : ''}
+            onClick={() => navigateSettings(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {settingsTab === 'projects' && canManageProjects && (
+      {activeTab === 'appearance' && <AppearanceSettings />}
+
+      {activeTab === 'projects' && canManageProjects && (
         <ProjectSettings
           projects={projects}
           tickets={tickets}
@@ -84,7 +77,7 @@ export default function SettingsView({
         />
       )}
 
-      {settingsTab === 'roles' && canManageRoles && (
+      {activeTab === 'roles' && canManageRoles && (
         <RoleSettings
           roles={roles}
           team={team}
@@ -94,7 +87,7 @@ export default function SettingsView({
         />
       )}
 
-      {settingsTab === 'categories' && canManageCategories && (
+      {activeTab === 'categories' && canManageCategories && (
         <>
           <section className="panel">
             <div className="panel-heading">
@@ -143,12 +136,6 @@ export default function SettingsView({
             </div>
           </section>
         </>
-      )}
-
-      {((settingsTab === 'categories' && !canManageCategories) ||
-        (settingsTab === 'roles' && !canManageRoles) ||
-        (settingsTab === 'projects' && !canManageProjects)) && (
-        <Empty text="Pilih pengaturan yang tersedia untuk hak akses Anda." />
       )}
     </>
   );

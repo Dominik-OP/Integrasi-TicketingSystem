@@ -1,13 +1,29 @@
 'use client';
+import { Dashboard } from '@/components/efferd/dashboard';
+import type { DashboardStat } from '@/components/efferd/stats';
 import { Empty } from '@/components/ui';
 import Select from '@/components/ui/Select';
 import { type Category, type Member, type Ticket } from '@/lib/domain';
 import { baseRole, roleLabel, type RoleDefinition } from '@/lib/permissions';
 import { type Project } from '@/lib/projects';
+import {
+  categoryShare,
+  firstResponseByDay,
+  formatHours,
+  isCompleted,
+  percentChange,
+  priorityByDay,
+  recentActivity,
+  type reportMetrics,
+  ticketVolume,
+} from '@/lib/report-metrics';
 import { CalendarDays } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface ReportsViewProps {
   reportTickets: Ticket[];
+  previousTickets: Ticket[];
+  previousMetrics: ReturnType<typeof reportMetrics>;
   closed: Ticket[];
   reviewed: Ticket[];
   overdue: Ticket[];
@@ -26,46 +42,113 @@ interface ReportsViewProps {
   setReportAgent: (v: string) => void;
   canExport: boolean;
   exportCSV: () => void;
+  onSelectTicket: (id: string) => void;
+  onViewTickets: () => void;
+  onViewAgentTickets: (id: string) => void;
 }
 
 export default function ReportsView({
   reportTickets,
+  previousTickets,
+  previousMetrics,
   closed,
+  reviewed,
+  overdue,
   frt,
   resolution,
   compliance,
   reopenRate,
   team,
   roles,
-  categories,
   user,
   period,
   setPeriod,
   reportAgent,
   setReportAgent,
+  onSelectTicket,
+  onViewTickets,
+  onViewAgentTickets,
 }: ReportsViewProps) {
-  const stats = [
+  const periodDays = Number(period);
+  const isAgent = baseRole(user, roles) === 'Agent';
+  const footnote = 'vs periode sebelumnya';
+
+  const stats: DashboardStat[] = [
     {
       label: 'First response time',
-      value: `${frt.toFixed(1)} jam`,
-      sub: 'Rata-rata respons pertama',
+      value: reviewed.length ? formatHours(frt) : '—',
+      delta:
+        reviewed.length && previousMetrics.reviewed.length
+          ? percentChange(frt, previousMetrics.frt)
+          : null,
+      footnote,
+      lowerIsBetter: true,
     },
     {
       label: 'Waktu penyelesaian',
-      value: `${resolution.toFixed(1)} jam`,
-      sub: 'Dari dibuat hingga ditutup',
+      value: closed.length ? formatHours(resolution) : '—',
+      delta:
+        closed.length && previousMetrics.closed.length
+          ? percentChange(resolution, previousMetrics.resolution)
+          : null,
+      footnote,
+      lowerIsBetter: true,
     },
     {
       label: 'SLA compliance',
       value: closed.length ? `${compliance}%` : '—',
-      sub: 'Tiket closed sesuai SLA',
+      delta:
+        closed.length && previousMetrics.closed.length
+          ? compliance - previousMetrics.compliance
+          : null,
+      deltaSuffix: ' poin',
+      footnote,
+      lowerIsBetter: false,
     },
     {
       label: 'Reopen rate',
       value: reportTickets.length ? `${reopenRate}%` : '—',
-      sub: 'Tiket yang dibuka kembali',
+      delta:
+        reportTickets.length && previousTickets.length
+          ? reopenRate - previousMetrics.reopenRate
+          : null,
+      deltaSuffix: ' poin',
+      footnote,
+      lowerIsBetter: true,
     },
   ];
+
+  const series = useMemo(
+    () => ({
+      volume: ticketVolume(reportTickets, periodDays),
+      categories: categoryShare(reportTickets),
+      priorities: priorityByDay(reportTickets, Math.min(periodDays, 10)),
+      firstResponse: firstResponseByDay(reportTickets, 7),
+      recentTickets: [...reportTickets]
+        .sort((a, b) => Date.parse(b.created) - Date.parse(a.created))
+        .slice(0, 5),
+      activity: recentActivity(reportTickets),
+    }),
+    [reportTickets, periodDays]
+  );
+  const overdueIds = useMemo(() => new Set(overdue.map((ticket) => ticket.id)), [overdue]);
+  const teammates = team
+    .filter(
+      (m) => (!isAgent || m.id === user.id) && (isAgent || !reportAgent || m.id === reportAgent)
+    )
+    .map((m) => {
+      const assigned = reportTickets.filter((t) => t.agent === m.id);
+      return {
+        id: m.id,
+        name: m.name,
+        role: roleLabel(m, roles),
+        active: m.active,
+        open: assigned.filter((t) => !isCompleted(t)).length,
+        completed: assigned.filter(isCompleted).length,
+      };
+    })
+    .sort((a, b) => b.open - a.open)
+    .slice(0, 6);
 
   return (
     <>
@@ -83,8 +166,8 @@ export default function ReportsView({
         </Select>
         <Select
           aria-label="Filter agent laporan"
-          disabled={baseRole(user, roles) === 'Agent'}
-          value={baseRole(user, roles) === 'Agent' ? user.id : reportAgent}
+          disabled={isAgent}
+          value={isAgent ? user.id : reportAgent}
           onChange={(e) => setReportAgent(e.target.value)}
         >
           <option value="">Semua agent</option>
@@ -97,133 +180,26 @@ export default function ReportsView({
         <span className="muted">Berdasarkan {reportTickets.length} tiket</span>
       </div>
 
-      <div className="stats-grid">
-        {stats.map((s) => (
-          <div className="stat-card" key={s.label}>
-            <span>{s.label}</span>
-            <strong>{s.value}</strong>
-            <small>{s.sub}</small>
-          </div>
-        ))}
-      </div>
-
-      <div className="report-grid">
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Tren tiket masuk</h2>
-            <span className="legend">
-              <i /> Tiket masuk
-            </span>
-          </div>
-          <p className="muted">Volume laporan selama 7 hari terakhir dalam periode terpilih</p>
-          <div className="bar-chart">
-            {Array.from({ length: 7 }, (_, i) => {
-              const d = new Date();
-              d.setDate(d.getDate() - 6 + i);
-              const amount = reportTickets.filter(
-                (t) => new Date(t.created).toDateString() === d.toDateString()
-              ).length;
-              return (
-                <div key={i}>
-                  <strong>{amount}</strong>
-                  <div
-                    style={{
-                      height: `${Math.max(3, (amount / Math.max(1, reportTickets.length)) * 160)}px`,
-                    }}
-                  />
-                  <span>
-                    {d.toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-        <section className="panel">
-          <h2>Distribusi kategori</h2>
-          <p className="muted">Kenali kendala yang paling sering dilaporkan</p>
-          <div className="category-bars">
-            {[
-              ...new Set([
-                ...categories.map((c) => c.name),
-                ...reportTickets.map((t) => t.category),
-              ]),
-            ].map((name) => {
-              const n = reportTickets.filter((t) => t.category === name).length;
-              return (
-                <div key={name}>
-                  <div>
-                    <span>{name}</span>
-                    <strong>{n} tiket</strong>
-                  </div>
-                  <div className="progress">
-                    <i
-                      style={{
-                        width: `${(n / Math.max(1, reportTickets.length)) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      </div>
-
-      <section className="panel">
-        <h2>{baseRole(user, roles) === 'Agent' ? 'Performa saya' : 'Performa anggota tim'}</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Anggota</th>
-                <th>Peran</th>
-                <th>Ditugaskan</th>
-                <th>Selesai / Closed</th>
-                <th>Beban kerja aktif</th>
-              </tr>
-            </thead>
-            <tbody>
-              {team
-                .filter(
-                  (m) =>
-                    (baseRole(user, roles) !== 'Agent' || m.id === user.id) &&
-                    (baseRole(user, roles) === 'Agent' || !reportAgent || m.id === reportAgent)
-                )
-                .map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      <span className="member-cell">
-                        <span className="avatar small color-0">
-                          {m.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </span>
-                        {m.name}
-                      </span>
-                    </td>
-                    <td>{roleLabel(m, roles)}</td>
-                    <td>{reportTickets.filter((t) => t.agent === m.id).length}</td>
-                    <td>{closed.filter((t) => t.agent === m.id).length}</td>
-                    <td>
-                      {
-                        reportTickets.filter(
-                          (t) => t.agent === m.id && !['Resolved', 'Closed'].includes(t.status)
-                        ).length
-                      }{' '}
-                      tiket
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <Dashboard
+        activity={series.activity}
+        categories={series.categories}
+        firstResponse={series.firstResponse}
+        onSelectTicket={onSelectTicket}
+        onViewAgentTickets={onViewAgentTickets}
+        onViewTickets={onViewTickets}
+        overdueIds={overdueIds}
+        periodDays={periodDays}
+        priorities={series.priorities}
+        recentTickets={series.recentTickets}
+        stats={stats}
+        teammates={teammates}
+        volume={series.volume}
+        volumeGrowth={
+          previousTickets.length
+            ? percentChange(reportTickets.length, previousTickets.length)
+            : null
+        }
+      />
     </>
   );
 }

@@ -25,19 +25,29 @@ export function useReports(
       ),
     [visibleTickets, categories]
   );
-  const reportTickets = useMemo(
-    () =>
-      visibleTickets.filter(
-        (ticket) =>
+  // Tickets created `from` to `to` periods ago, so 0–1 is the selected period and 1–2 the one before.
+  const ticketsInPeriods = useMemo(() => {
+    const periodMs = Number(period) * 86400000;
+    return (from: number, to: number) =>
+      visibleTickets.filter((ticket) => {
+        const age = Date.now() - Date.parse(ticket.created);
+        return (
           (baseRole(user, roles) !== 'Agent' || ticket.agent === user.id) &&
-          Date.now() - Date.parse(ticket.created) < Number(period) * 86400000 &&
+          (from === 0 || age >= from * periodMs) &&
+          age < to * periodMs &&
           (baseRole(user, roles) === 'Agent' || !reportAgent || ticket.agent === reportAgent)
-      ),
-    [visibleTickets, roles, user, period, reportAgent]
-  );
+        );
+      });
+  }, [visibleTickets, roles, user, period, reportAgent]);
+  const reportTickets = useMemo(() => ticketsInPeriods(0, 1), [ticketsInPeriods]);
+  const previousTickets = useMemo(() => ticketsInPeriods(1, 2), [ticketsInPeriods]);
   const metrics = useMemo(
     () => reportMetrics(reportTickets, categories),
     [reportTickets, categories]
   );
-  return { reportTickets, overdue, ...metrics };
+  const previousMetrics = useMemo(
+    () => reportMetrics(previousTickets, categories),
+    [previousTickets, categories]
+  );
+  return { reportTickets, previousTickets, previousMetrics, overdue, ...metrics };
 }

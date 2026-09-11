@@ -130,17 +130,11 @@ export default function Workspace({
     saveRole,
   } = useWorkspaceData(setToast);
 
-  const {
-    user,
-    signedIn,
-    accessStatus,
-    authLoading,
-    can,
-    canManage,
-    canSettings,
-    signIn,
-    signOut,
-  } = useAuth(team, roles, ready);
+  const { user, signedIn, accessStatus, authLoading, can, canManage, signIn, signOut } = useAuth(
+    team,
+    roles,
+    ready
+  );
 
   const { changeTicket, moveTicket } = useTickets(
     team,
@@ -442,13 +436,11 @@ export default function Workspace({
           <nav>
             {nav
               .filter((n) =>
-                n.id === 'settings'
-                  ? canSettings
-                  : n.id === 'team'
-                    ? can('manage_users') || can('manage_roles')
-                    : n.id === 'reports'
-                      ? can('view_reports')
-                      : true
+                n.id === 'team'
+                  ? can('manage_users') || can('manage_roles')
+                  : n.id === 'reports'
+                    ? can('view_reports')
+                    : true
               )
               .map((n) => (
                 <button
@@ -630,6 +622,15 @@ export default function Workspace({
             {view === 'reports' && can('view_reports') && (
               <ReportsView
                 reportTickets={reportsData.reportTickets}
+                previousTickets={reportsData.previousTickets}
+                previousMetrics={reportsData.previousMetrics}
+                onSelectTicket={setSelected}
+                onViewTickets={() => navigate('tickets')}
+                onViewAgentTickets={(agentId) => {
+                  resetFilters();
+                  setAgent(agentId);
+                  navigate('tickets');
+                }}
                 closed={reportsData.closed}
                 reviewed={reportsData.reviewed}
                 overdue={reportsData.overdue}
