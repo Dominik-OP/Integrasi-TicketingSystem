@@ -1,5 +1,5 @@
 'use client';
-import { type Member, type Ticket } from '@/lib/domain';
+import { type Category, type Member, type Ticket } from '@/lib/domain';
 import {
   canUpdateTicket,
   canViewTicket,
@@ -30,6 +30,7 @@ export function useTickets(
   setTickets: Dispatch<SetStateAction<Ticket[]>>,
   ready: boolean,
   projects: Project[],
+  categories: Category[],
   roles: RoleDefinition[],
   userId: string,
   setToast: (msg: string) => void,
@@ -47,7 +48,8 @@ export function useTickets(
       if (
         (patch.agent !== undefined ||
           patch.reviewer !== undefined ||
-          patch.priority !== undefined) &&
+          patch.priority !== undefined ||
+          patch.category !== undefined) &&
         !hasPermission(user, roles, 'assign_ticket')
       )
         return;
@@ -61,6 +63,16 @@ export function useTickets(
       }
       const databaseId = ticket.databaseId;
       if (!databaseId || !ticket.version) return;
+      const selectedCategory =
+        patch.category !== undefined
+          ? categories.find(
+              (category) => category.name === patch.category && category.active !== false
+            )
+          : undefined;
+      if (patch.category !== undefined && !selectedCategory?.id) {
+        setToast('Kategori aktif tidak ditemukan.');
+        return;
+      }
       const newestComment = patch.comments?.at(-1);
       const payload = newestComment
         ? {
@@ -76,13 +88,19 @@ export function useTickets(
               reason: patch.closure?.reason,
               resolution: patch.resolution,
             }
-          : {
-              action: 'assign',
-              expectedVersion: ticket.version,
-              reviewer: patch.reviewer ?? ticket.reviewer,
-              agent: patch.agent ?? ticket.agent,
-              priority: patch.priority ?? ticket.priority,
-            };
+          : selectedCategory
+            ? {
+                action: 'categorize',
+                expectedVersion: ticket.version,
+                categoryId: selectedCategory.id,
+              }
+            : {
+                action: 'assign',
+                expectedVersion: ticket.version,
+                reviewer: patch.reviewer ?? ticket.reviewer,
+                agent: patch.agent ?? ticket.agent,
+                priority: patch.priority ?? ticket.priority,
+              };
       setTickets((all) =>
         all.map((t) =>
           t.id === id
@@ -126,7 +144,7 @@ export function useTickets(
           void reload();
         });
     },
-    [tickets, setTickets, userId, team, roles, setToast, onResolve, onClose, reload]
+    [tickets, setTickets, userId, team, categories, roles, setToast, onResolve, onClose, reload]
   );
 
   const moveTicket = useCallback(

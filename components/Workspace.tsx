@@ -148,6 +148,7 @@ export default function Workspace({
     setTickets,
     ready,
     projects,
+    categories,
     roles,
     user.id,
     setToast,
@@ -962,6 +963,36 @@ export default function Workspace({
                 {statuses.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
+              </Select>
+            </label>
+            <label>
+              Kategori
+              <Select
+                aria-label="Kategori tiket"
+                value={activeTicket.category}
+                disabled={!canManage}
+                onChange={(e) =>
+                  changeTicket(
+                    activeTicket.id,
+                    { category: e.target.value },
+                    `Kategori diubah menjadi ${e.target.value}`
+                  )
+                }
+              >
+                <option value="Belum dikategorikan" disabled>
+                  Belum dikategorikan
+                </option>
+                {categories
+                  .filter(
+                    (category) =>
+                      category.active !== false || category.name === activeTicket.category
+                  )
+                  .map((category) => (
+                    <option key={category.id ?? category.name} value={category.name}>
+                      {category.name}
+                      {category.active === false ? ' (nonaktif)' : ''}
+                    </option>
+                  ))}
               </Select>
             </label>
             <label>

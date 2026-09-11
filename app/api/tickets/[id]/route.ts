@@ -27,6 +27,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       p_agent_user_id: body.agent || null,
       p_priority: String(body.priority ?? 'Medium').toLowerCase(),
     });
+  } else if (body.action === 'categorize') {
+    result = await admin.database.rpc('categorize_ticket', {
+      p_ticket_id: id,
+      p_expected_version: Number(body.expectedVersion),
+      p_actor_user_id: auth.user.id,
+      p_category_id: String(body.categoryId ?? ''),
+    });
   } else if (body.action === 'transition') {
     const status = statusValues[body.status as Status];
     if (!status) return NextResponse.json({ error: 'Status tidak valid.' }, { status: 400 });
