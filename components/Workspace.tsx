@@ -397,7 +397,6 @@ export default function Workspace({
           clearSubmitted={() => setSubmitted(null)}
           form={ticketForm()}
           token={token}
-          notify={setToast}
           ready={ready}
         />
         {toast && (

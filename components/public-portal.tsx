@@ -21,14 +21,17 @@ import TicketHistory from './ticket-history';
 type Props = {
   view: string;
   projects: Project[];
-  signIn: (email: string, otp?: string) => Promise<TeamAccessStatus | 'code_sent'>;
+  signIn: (
+    email: string,
+    password: string,
+    mode?: 'sign-in' | 'register'
+  ) => Promise<TeamAccessStatus>;
   accessStatus: TeamAccessStatus;
   navigate: (view: string) => void;
   submitted: Ticket | null;
   clearSubmitted: () => void;
   form: ReactNode;
   token: string;
-  notify: (message: string) => void;
   ready: boolean;
 };
 export default function PublicPortal({
@@ -41,24 +44,14 @@ export default function PublicPortal({
   clearSubmitted,
   form,
   token,
-  notify,
   ready,
 }: Props) {
   const [tracked, setTracked] = useState<Ticket | null>(null),
     [error, setError] = useState(''),
     [loginEmail, setLoginEmail] = useState(''),
-    [codeSent, setCodeSent] = useState(false),
+    [authMode, setAuthMode] = useState<'sign-in' | 'register'>('sign-in'),
     [authBusy, setAuthBusy] = useState(false),
-    [trackingBusy, setTrackingBusy] = useState(false),
-    [resendCooldown, setResendCooldown] = useState(0);
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = window.setInterval(
-      () => setResendCooldown((seconds) => Math.max(0, seconds - 1)),
-      1000
-    );
-    return () => window.clearInterval(timer);
-  }, [resendCooldown]);
+    [trackingBusy, setTrackingBusy] = useState(false);
   useEffect(() => {
     setTracked(null);
     setError('');
@@ -206,16 +199,13 @@ export default function PublicPortal({
                   const email = String(formData.get('email') ?? loginEmail)
                     .trim()
                     .toLowerCase();
-                  const otp = codeSent ? String(formData.get('otp') ?? '') : undefined;
+                  const password = String(formData.get('password') ?? '');
                   setAuthBusy(true);
                   setError('');
                   try {
-                    const status = await signIn(email, otp);
+                    const status = await signIn(email, password, authMode);
                     setLoginEmail(email);
-                    if (status === 'code_sent') {
-                      setCodeSent(true);
-                      setResendCooldown(60);
-                    } else if (status === 'active') window.location.assign('/');
+                    if (status === 'active') window.location.assign('/');
                   } catch (reason) {
                     setError(reason instanceof Error ? reason.message : 'Proses masuk gagal.');
                   } finally {
@@ -228,7 +218,9 @@ export default function PublicPortal({
                 </div>
                 <h2>Masuk sebagai anggota tim</h2>
                 <p className="muted small-text">
-                  Kami kirim kode masuk 6 digit ke email kantor Anda.
+                  {authMode === 'register'
+                    ? 'Buat akun memakai email kantor. Admin memilih role setelah pendaftaran.'
+                    : 'Gunakan email kantor dan password Anda.'}
                 </p>
                 <label>
                   Email kantor
@@ -236,28 +228,23 @@ export default function PublicPortal({
                     name="email"
                     type="email"
                     required
-                    readOnly={codeSent}
                     autoComplete="email"
                     value={loginEmail}
                     onChange={(event) => setLoginEmail(event.target.value)}
                     placeholder="Email kantor"
                   />
                 </label>
-                {codeSent && (
-                  <label>
-                    Kode masuk
-                    <input
-                      name="otp"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      required
-                      autoFocus
-                      placeholder="000000"
-                    />
-                  </label>
-                )}
+                <label>
+                  Password
+                  <input
+                    name="password"
+                    type="password"
+                    minLength={6}
+                    required
+                    autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
+                    placeholder="Minimal 6 karakter"
+                  />
+                </label>
                 {error && (
                   <p role="alert" className="error-text">
                     {error}
@@ -269,38 +256,18 @@ export default function PublicPortal({
                   ) : (
                     <ArrowRight size={16} />
                   )}{' '}
-                  {authBusy ? 'Memproses…' : codeSent ? 'Verifikasi kode' : 'Kirim kode masuk'}
+                  {authBusy ? 'Memproses…' : authMode === 'register' ? 'Buat akun' : 'Masuk'}
                 </button>
-                {codeSent && (
-                  <div className="form-row">
-                    <button
-                      type="button"
-                      disabled={authBusy || resendCooldown > 0}
-                      onClick={async () => {
-                        setAuthBusy(true);
-                        setError('');
-                        try {
-                          await signIn(loginEmail);
-                          setResendCooldown(60);
-                          notify('Kode verifikasi baru sudah dikirim.');
-                        } catch (reason) {
-                          setError(
-                            reason instanceof Error ? reason.message : 'Kode gagal dikirim ulang.'
-                          );
-                        } finally {
-                          setAuthBusy(false);
-                        }
-                      }}
-                    >
-                      {resendCooldown > 0
-                        ? `Kirim ulang kode (${resendCooldown} dtk)`
-                        : 'Kirim ulang kode verifikasi'}
-                    </button>
-                    <button type="button" onClick={() => setCodeSent(false)} disabled={authBusy}>
-                      Ganti email
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  disabled={authBusy}
+                  onClick={() => {
+                    setAuthMode((mode) => (mode === 'sign-in' ? 'register' : 'sign-in'));
+                    setError('');
+                  }}
+                >
+                  {authMode === 'register' ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'}
+                </button>
               </form>
             )
           ) : (

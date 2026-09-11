@@ -6,7 +6,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const email = normalizeEmail(String(body.email ?? ''));
-  const otp = String(body.otp ?? '').trim();
+  const password = String(body.password ?? '');
+  const mode = body.mode === 'register' ? 'register' : 'sign-in';
 
   let domain: string;
   try {
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
   if (!/^\S+@\S+\.\S+$/.test(email) || !isAllowedTeamEmail(email, domain)) {
     return NextResponse.json({ error: 'Gunakan email kantor yang terdaftar.' }, { status: 400 });
   }
+  if (password.length < 6) {
+    return NextResponse.json({ error: 'Password minimal 6 karakter.' }, { status: 400 });
+  }
 
   const response = NextResponse.json({ ok: true });
   const auth = createAuthActions({
@@ -26,29 +30,19 @@ export async function POST(request: NextRequest) {
     responseCookies: response.cookies,
   });
 
-  if (!otp) {
-    const { error } = await auth.signInWithOtp({ email });
-    if (error) {
-      return NextResponse.json(
-        { error: 'Kode masuk tidak dapat dikirim. Coba lagi setelah 60 detik.' },
-        { status: error.statusCode ?? 400 }
-      );
-    }
-    return NextResponse.json({ ok: true, accessStatus: 'code_sent' });
-  }
-
-  if (!/^\d{6}$/.test(otp)) {
-    return NextResponse.json({ error: 'Masukkan kode 6 digit.' }, { status: 400 });
-  }
-  const { data, error } = await auth.verifyOtp({
-    email,
-    otp,
-    name: email.split('@')[0] || 'Anggota',
-  });
+  const { data, error } =
+    mode === 'register'
+      ? await auth.signUp({ email, password, name: email.split('@')[0] || 'Anggota' })
+      : await auth.signInWithPassword({ email, password });
   if (error || !data?.user?.email) {
     return NextResponse.json(
-      { error: 'Kode salah atau kedaluwarsa.' },
-      { status: error?.statusCode ?? 401, headers: response.headers }
+      {
+        error:
+          mode === 'register'
+            ? (error?.message ?? 'Akun tidak dapat dibuat.')
+            : 'Email atau password salah.',
+      },
+      { status: error?.statusCode ?? (mode === 'register' ? 400 : 401), headers: response.headers }
     );
   }
 

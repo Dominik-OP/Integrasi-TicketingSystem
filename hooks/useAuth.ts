@@ -27,22 +27,23 @@ export function useAuth(_team: Member[], roles: RoleDefinition[], _ready: boolea
       .finally(() => setAuthLoading(false));
   }, []);
 
-  const signIn = useCallback(async (email: string, otp?: string) => {
-    const response = await fetch('/api/auth/sign-in', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, otp }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error ?? 'Proses masuk gagal.');
-    }
-    if (data.accessStatus !== 'code_sent') {
+  const signIn = useCallback(
+    async (email: string, password: string, mode: 'sign-in' | 'register' = 'sign-in') => {
+      const response = await fetch('/api/auth/sign-in', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password, mode }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Proses masuk gagal.');
+      }
       setAccessStatus(data.accessStatus ?? 'unauthorized');
       setSignedIn(data.accessStatus === 'active');
-    }
-    return data.accessStatus as TeamAccessStatus | 'code_sent';
-  }, []);
+      return data.accessStatus as TeamAccessStatus;
+    },
+    []
+  );
 
   const signOut = useCallback(async () => {
     await fetch('/api/auth/sign-out', { method: 'POST' });
