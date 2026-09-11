@@ -19,6 +19,7 @@ export async function loadWorkspaceRaw(client: InsForgeClient) {
     events,
     comments,
     attachments,
+    feedback,
   ] = await Promise.all([
     rows(client.database.from('team_members').select('*').order('display_name')),
     rows(client.database.from('roles').select('*').order('name')),
@@ -37,6 +38,8 @@ export async function loadWorkspaceRaw(client: InsForgeClient) {
     rows(client.database.from('ticket_events').select('*').order('occurred_at')),
     rows(client.database.from('comments').select('*').order('created_at')),
     rows(client.database.from('attachments').select('*').order('created_at')),
+    // Optional until the reporter-participation migration is applied everywhere.
+    rows(client.database.from('ticket_feedback').select('*')).catch(() => []),
   ]);
   return {
     team,
@@ -50,6 +53,7 @@ export async function loadWorkspaceRaw(client: InsForgeClient) {
     events,
     comments,
     attachments,
+    feedback,
     accessRequests: [] as Record<string, unknown>[],
   };
 }

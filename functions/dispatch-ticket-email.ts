@@ -2,12 +2,20 @@
 // @ts-nocheck -- This file runs in InsForge's Deno runtime, outside the Next.js TypeScript graph.
 import { createAdminClient } from 'npm:@insforge/sdk';
 
-const SUPPORTED_EVENTS = new Set([
+const REPORTER_EVENTS = new Set([
   'ticket_created',
   'public_reply_added',
   'ticket_resolved',
   'ticket_closed',
 ]);
+const TEAM_EVENTS = new Set([
+  'ticket_created',
+  'reporter_reply_added',
+  'ticket_reopened_by_reporter',
+]);
+const SUPPORTED_EVENTS = new Set([...REPORTER_EVENTS, ...TEAM_EVENTS]);
+/** Events about an assigned ticket go to its agent/reviewer; the others to every admin/reviewer. */
+const ASSIGNEE_EVENTS = new Set(['reporter_reply_added', 'ticket_reopened_by_reporter']);
 const encoder = new TextEncoder();
 
 function required(name: string) {
@@ -128,10 +136,10 @@ function reporterMessage(snapshot: any, trackingUrl: string) {
   if (snapshot.eventType === 'ticket_resolved') {
     return {
       subject: `[${number}] Tiket sudah diselesaikan`,
-      text: `Tiket ${number} sudah diselesaikan. Pantau detail: ${trackingUrl}`,
+      text: `Tiket ${number} sudah diselesaikan. Konfirmasi apakah masalah Anda sudah teratasi dan beri penilaian: ${trackingUrl}`,
       html: layout(
         'Tiket sudah diselesaikan',
-        `Tim support telah menyelesaikan tiket ${number}.`,
+        `Tim support telah menyelesaikan tiket ${number}. Mohon konfirmasi apakah masalah Anda sudah teratasi dan beri penilaian layanan kami.`,
         detailRows([
           ['Penyebab', snapshot.resolutionCause],
           ['Perbaikan', snapshot.resolutionFix],
@@ -139,7 +147,7 @@ function reporterMessage(snapshot: any, trackingUrl: string) {
           ['Langkah Anda', snapshot.resolutionSteps],
         ]),
         trackingUrl,
-        'Lihat penyelesaian'
+        'Konfirmasi & beri penilaian'
       ),
     };
   }
@@ -159,7 +167,39 @@ function reporterMessage(snapshot: any, trackingUrl: string) {
   };
 }
 
-function teamMessage(snapshot: any, dashboardUrl: string) {
+export function teamMessage(snapshot: any, dashboardUrl: string) {
+  if (snapshot.eventType === 'reporter_reply_added') {
+    return {
+      subject: `[${snapshot.ticketNumber}] Balasan baru dari pelapor`,
+      text: `${snapshot.reporterName} membalas tiket ${snapshot.ticketNumber}: ${snapshot.commentBody}\n\n${dashboardUrl}`,
+      html: layout(
+        'Balasan baru dari pelapor',
+        `${snapshot.reporterName} membalas tiket ${snapshot.ticketNumber}.`,
+        detailRows([
+          ['Judul', snapshot.title],
+          ['Balasan', snapshot.commentBody],
+        ]),
+        dashboardUrl,
+        'Buka tiket'
+      ),
+    };
+  }
+  if (snapshot.eventType === 'ticket_reopened_by_reporter') {
+    return {
+      subject: `[${snapshot.ticketNumber}] Dibuka kembali oleh pelapor`,
+      text: `${snapshot.reporterName} menyatakan masalah pada ${snapshot.ticketNumber} belum selesai: ${snapshot.commentBody}\n\n${dashboardUrl}`,
+      html: layout(
+        'Tiket dibuka kembali',
+        `${snapshot.reporterName} menyatakan masalah pada tiket ${snapshot.ticketNumber} belum selesai.`,
+        detailRows([
+          ['Judul', snapshot.title],
+          ['Kendala yang masih terjadi', snapshot.commentBody],
+        ]),
+        dashboardUrl,
+        'Tinjau tiket'
+      ),
+    };
+  }
   return {
     subject: `[Tiket baru ${snapshot.ticketNumber}] ${snapshot.title}`,
     text: `Tiket baru ${snapshot.ticketNumber} dari ${snapshot.reporterName}. Buka dashboard: ${dashboardUrl}`,
@@ -179,11 +219,29 @@ function teamMessage(snapshot: any, dashboardUrl: string) {
   };
 }
 
+/** Assignees when there are any, otherwise managers; never the reporter, never duplicates. */
+export function teamRecipients(assignees: string[], managers: string[], reporterEmail: string) {
+  const reporter = String(reporterEmail ?? '')
+    .trim()
+    .toLowerCase();
+  return [
+    ...new Set(
+      (assignees.length ? assignees : managers)
+        .map((email) =>
+          String(email ?? '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter((email) => email && email !== reporter)
+    ),
+  ];
+}
+
 async function createSnapshot(admin: any, event: any) {
   const { data: ticket, error: ticketError } = await admin.database
     .from('tickets')
     .select(
-      'id, project_id, ticket_number, reporter_name, reporter_email, title, description, impact, resolution_cause, resolution_fix, resolution_impact, resolution_steps, closed_reason'
+      'id, project_id, ticket_number, reporter_name, reporter_email, title, description, impact, resolution_cause, resolution_fix, resolution_impact, resolution_steps, closed_reason, assigned_agent_id, assigned_reviewer_id'
     )
     .eq('id', event.aggregate_id)
     .maybeSingle();
@@ -197,8 +255,8 @@ async function createSnapshot(admin: any, event: any) {
   if (projectError || !project) throw new Error(projectError?.message ?? 'Project not found');
 
   let commentBody = '';
-  if (event.event_type === 'public_reply_added') {
-    const commentId = String(event.payload?.comment_id ?? '');
+  if (event.payload?.comment_id) {
+    const commentId = String(event.payload.comment_id);
     const { data: comment, error: commentError } = await admin.database
       .from('comments')
       .select('body, visibility')
@@ -212,29 +270,38 @@ async function createSnapshot(admin: any, event: any) {
   }
 
   let teamEmails: string[] = [];
-  if (event.event_type === 'ticket_created') {
-    const { data: roles, error: rolesError } = await admin.database
-      .from('roles')
-      .select('id')
-      .eq('is_active', true)
-      .in('access_level_key', ['admin', 'reviewer']);
-    if (rolesError) throw new Error(rolesError.message);
-    const roleIds = (roles ?? []).map((role: any) => role.id);
-    if (roleIds.length) {
-      const { data: members, error: membersError } = await admin.database
+  if (TEAM_EVENTS.has(event.event_type)) {
+    let assigneeEmails: string[] = [];
+    const assigneeIds = [ticket.assigned_agent_id, ticket.assigned_reviewer_id].filter(Boolean);
+    if (ASSIGNEE_EVENTS.has(event.event_type) && assigneeIds.length) {
+      const { data: assignees, error: assigneesError } = await admin.database
         .from('team_members')
         .select('email')
         .eq('is_active', true)
-        .in('role_id', roleIds);
-      if (membersError) throw new Error(membersError.message);
-      teamEmails = [
-        ...new Set(
-          (members ?? [])
-            .map((member: any) => String(member.email).trim().toLowerCase())
-            .filter((email: string) => email && email !== ticket.reporter_email)
-        ),
-      ];
+        .in('user_id', assigneeIds);
+      if (assigneesError) throw new Error(assigneesError.message);
+      assigneeEmails = (assignees ?? []).map((member: any) => member.email);
     }
+    let managerEmails: string[] = [];
+    if (!assigneeEmails.length) {
+      const { data: roles, error: rolesError } = await admin.database
+        .from('roles')
+        .select('id')
+        .eq('is_active', true)
+        .in('access_level_key', ['admin', 'reviewer']);
+      if (rolesError) throw new Error(rolesError.message);
+      const roleIds = (roles ?? []).map((role: any) => role.id);
+      if (roleIds.length) {
+        const { data: members, error: membersError } = await admin.database
+          .from('team_members')
+          .select('email')
+          .eq('is_active', true)
+          .in('role_id', roleIds);
+        if (membersError) throw new Error(membersError.message);
+        managerEmails = (members ?? []).map((member: any) => member.email);
+      }
+    }
+    teamEmails = teamRecipients(assigneeEmails, managerEmails, ticket.reporter_email);
   }
 
   return {
@@ -384,11 +451,14 @@ async function processEvent(admin: any, event: any, appUrl: string) {
     throw new Error(`Unsupported outbox event: ${event.event_type}`);
   }
   const snapshot = await getSnapshot(admin, event);
-  const trackingUrl = await ensureTrackingUrl(admin, event.id, snapshot, appUrl);
-  const reporter = reporterMessage(snapshot, trackingUrl);
-  const results = [await sendEmail(admin, event, snapshot.reporterEmail, 'reporter', reporter)];
+  const results = [];
+  if (REPORTER_EVENTS.has(event.event_type)) {
+    const trackingUrl = await ensureTrackingUrl(admin, event.id, snapshot, appUrl);
+    const reporter = reporterMessage(snapshot, trackingUrl);
+    results.push(await sendEmail(admin, event, snapshot.reporterEmail, 'reporter', reporter));
+  }
 
-  if (event.event_type === 'ticket_created') {
+  if (TEAM_EVENTS.has(event.event_type)) {
     const dashboardUrl = `${appUrl}/tickets`;
     const team = teamMessage(snapshot, dashboardUrl);
     for (const email of snapshot.teamEmails) {

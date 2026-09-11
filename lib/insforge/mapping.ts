@@ -129,7 +129,12 @@ export function mapWorkspace(
         author: item.author_name_snapshot,
         authorRole: item.author_role_snapshot,
         internal: item.visibility === 'internal',
+        fromReporter: item.source === 'reporter',
       })),
+    feedback: (() => {
+      const row = (raw.feedback ?? []).find((item: any) => item.ticket_id === ticket.id);
+      return row ? { rating: row.rating, comment: row.comment, at: row.submitted_at } : undefined;
+    })(),
   }));
   return { team, accessRequests, roles, projects, categories, tickets };
 }

@@ -26,6 +26,7 @@
 @source '../components/shadcn';
 @source '../components/efferd';
 @source '../components/custom-sidebar-trigger.tsx';
+@source '../components/tracking';
 /* "outline" appears in shadcn variant names; as a utility it would restyle the legacy `.outline` button. */
 @source not inline('outline');
 

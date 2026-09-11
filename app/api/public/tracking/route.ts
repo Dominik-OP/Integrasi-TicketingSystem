@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createHash } from 'crypto';
 import { adminClient } from '@/lib/insforge/server';
+import { trackingTokenHash } from '@/lib/reporter-actions';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   let ticketId = '';
 
   if (token) {
-    const hash = createHash('sha256').update(token).digest('hex');
+    const hash = trackingTokenHash(token);
     const { data: grant } = await admin.database
       .from('tracking_grants')
       .select('ticket_id')
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     { data: events },
     { data: comments },
     { data: attachments },
+    { data: feedback },
   ] = await Promise.all([
     admin.database.from('tickets').select('*').eq('id', ticketId).single(),
     admin.database.from('projects').select('id, slug, name').limit(100),
@@ -62,6 +63,11 @@ export async function POST(request: Request) {
       .eq('visibility', 'public')
       .eq('upload_status', 'ready')
       .order('created_at'),
+    admin.database
+      .from('ticket_feedback')
+      .select('rating, comment, submitted_at')
+      .eq('ticket_id', ticketId)
+      .maybeSingle(),
   ]);
   if (!ticket) return NextResponse.json({ error: 'Tiket tidak ditemukan.' }, { status: 404 });
   const projects = Array.isArray(project) ? project : [];
@@ -128,6 +134,9 @@ export async function POST(request: Request) {
             authorRole: 'Support',
           }
         : undefined,
+      feedback: feedback
+        ? { rating: feedback.rating, comment: feedback.comment, at: feedback.submitted_at }
+        : undefined,
       history: (events ?? []).map((item: any) => ({
         text: item.summary,
         at: item.occurred_at,
@@ -140,6 +149,7 @@ export async function POST(request: Request) {
         author: item.author_name_snapshot,
         authorRole: item.author_role_snapshot,
         internal: false,
+        fromReporter: item.source === 'reporter',
       })),
     },
   });

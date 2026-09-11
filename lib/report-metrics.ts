@@ -18,7 +18,9 @@ export function firstResponseAt(ticket: Ticket) {
           entry.text.includes('Status diubah menjadi') && !entry.text.includes('New / Open')
       )
       .map((entry) => entry.at),
-    ...ticket.comments.filter((comment) => !comment.internal).map((comment) => comment.at),
+    ...ticket.comments
+      .filter((comment) => !comment.internal && !comment.fromReporter)
+      .map((comment) => comment.at),
   ]
     .filter((at) => Number.isFinite(Date.parse(at)))
     .sort((a, b) => Date.parse(a) - Date.parse(b));

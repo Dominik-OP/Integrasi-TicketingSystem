@@ -53,6 +53,11 @@ export type TicketAttachment = {
   name: string;
   url?: string;
 };
+export type TicketFeedback = {
+  rating: number;
+  comment: string;
+  at: string;
+};
 export type Ticket = {
   databaseId?: string;
   version?: number;
@@ -75,6 +80,7 @@ export type Ticket = {
   attachments: TicketAttachment[];
   resolution?: Resolution;
   closure?: Closure;
+  feedback?: TicketFeedback;
   history: {
     text: string;
     at: string;
@@ -89,6 +95,8 @@ export type Ticket = {
     author: string;
     authorRole?: string;
     internal: boolean;
+    /** Written by the reporter from the tracking page rather than by the team. */
+    fromReporter?: boolean;
   }[];
 };
 export const initials = (name: string) =>

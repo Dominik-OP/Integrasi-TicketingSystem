@@ -14,9 +14,10 @@ import {
   Mail,
   Search,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ThemeToggle } from './preferences';
 import TicketHistory from './ticket-history';
+import ReporterActions from './tracking/ReporterActions';
 
 type Props = {
   view: string;
@@ -56,22 +57,26 @@ export default function PublicPortal({
     setTracked(null);
     setError('');
   }, [view, token]);
+  const loadTracking = useCallback(
+    async (signal?: AbortSignal) => {
+      const response = await fetch('/api/public/tracking', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token }),
+        ...(signal ? { signal } : {}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setTracked(data.ticket);
+    },
+    [token]
+  );
   useEffect(() => {
     if (!token || view !== 'track') return;
     const controller = new AbortController();
     setError('');
     setTrackingBusy(true);
-    void fetch('/api/public/tracking', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token }),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
-        setTracked(data.ticket);
-      })
+    loadTracking(controller.signal)
       .catch((reason) => {
         if (!controller.signal.aborted)
           setError(reason instanceof Error ? reason.message : 'Link tidak tersedia.');
@@ -80,7 +85,7 @@ export default function PublicPortal({
         if (!controller.signal.aborted) setTrackingBusy(false);
       });
     return () => controller.abort();
-  }, [token, view]);
+  }, [token, view, loadTracking]);
   const ticket = tracked;
   const resolution = ticket?.resolution;
   const link = submitted?.trackingToken ? `/track/${submitted.trackingToken}` : '';
@@ -407,14 +412,14 @@ export default function PublicPortal({
                       ))}
                     </section>
                   )}
-                  <h3>Balasan tim</h3>
+                  <h3>Percakapan</h3>
                   {publicComments.length ? (
                     publicComments.map((c, i) => (
-                      <div className="comment" key={i}>
+                      <div className={c.fromReporter ? 'comment reporter' : 'comment'} key={i}>
                         <strong>
-                          {c.author}{' '}
+                          {c.fromReporter ? 'Anda' : c.author}{' '}
                           <span className="category-tag">
-                            {c.authorRole ?? 'Role belum tercatat'}
+                            {c.fromReporter ? 'Pelapor' : (c.authorRole ?? 'Tim support')}
                           </span>
                         </strong>
                         <small>{date(c.at)}</small>
@@ -430,6 +435,12 @@ export default function PublicPortal({
                   <p className="muted small-text">
                     Catatan internal tim tidak ditampilkan pada halaman ini.
                   </p>
+                  <ReporterActions
+                    key={`${ticket.id}-${ticket.status}`}
+                    ticket={ticket}
+                    token={token}
+                    onChanged={() => loadTracking()}
+                  />
                 </div>
               )}
             </>

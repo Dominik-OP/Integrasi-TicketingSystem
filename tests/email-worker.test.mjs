@@ -49,3 +49,43 @@ test('tracking token derivation is deterministic without exposing its secret', a
   assert.equal(first.includes('private-secret'), false);
   assert.match(first, /^[0-9a-f]{64}$/);
 });
+
+test('team notifications prefer assignees and never email the reporter', async (context) => {
+  const { module, cleanup } = await loadWorkerHelpers();
+  context.after(cleanup);
+  assert.deepEqual(
+    module.teamRecipients(
+      ['Agent@x.id', 'agent@x.id', 'reporter@x.id'],
+      ['admin@x.id'],
+      'Reporter@x.id'
+    ),
+    ['agent@x.id']
+  );
+  assert.deepEqual(module.teamRecipients([], ['admin@x.id', 'lead@x.id'], 'r@x.id'), [
+    'admin@x.id',
+    'lead@x.id',
+  ]);
+});
+
+test('reporter replies and reopenings produce escaped team emails', async (context) => {
+  const { module, cleanup } = await loadWorkerHelpers();
+  context.after(cleanup);
+  const base = {
+    ticketNumber: 'APP-20260911-0001',
+    reporterName: 'Budi',
+    title: 'Login gagal',
+    commentBody: '<script>alert(1)</script>',
+  };
+  const reply = module.teamMessage(
+    { ...base, eventType: 'reporter_reply_added' },
+    'https://app/tickets'
+  );
+  assert.equal(reply.subject, '[APP-20260911-0001] Balasan baru dari pelapor');
+  assert.ok(reply.html.includes('&lt;script&gt;'));
+  assert.ok(!reply.html.includes('<script>'));
+  const reopened = module.teamMessage(
+    { ...base, eventType: 'ticket_reopened_by_reporter' },
+    'https://app/tickets'
+  );
+  assert.equal(reopened.subject, '[APP-20260911-0001] Dibuka kembali oleh pelapor');
+});
